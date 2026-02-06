@@ -984,7 +984,7 @@
     }
 
     async function fetchFromCoinGecko(coinId, days) {
-        const url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days === 'max' ? 'max' : days}&interval=daily`;
+        const url = 'https://api.coingecko.com/api/v3/coins/' + coinId + '/market_chart?vs_currency=usd&days=' + (days === 'max' ? 'max' : days) + '&interval=daily';
         const r = await fetchWithTimeout(url, { headers: { 'x-cg-demo-api-key': 'CG-demo' } });
         if (!r.ok) throw new Error(r.status);
         const j = await r.json();
@@ -994,7 +994,7 @@
 
     async function fetchFromCoinCap(coinId, daysNum) {
         const now = Date.now(), start = now - daysNum * 86400000;
-        const r = await fetchWithTimeout(`https://api.coincap.io/v2/assets/${COINCAP_IDS[coinId]}/history?interval=d1&start=${start}&end=${now}`);
+        const r = await fetchWithTimeout('https://api.coincap.io/v2/assets/' + COINCAP_IDS[coinId] + '/history?interval=d1&start=' + start + '&end=' + now);
         if (!r.ok) throw new Error(r.status);
         const j = await r.json();
         if (!j.data?.length) throw new Error('Empty');
@@ -1003,7 +1003,7 @@
 
     async function fetchFromCryptoCompare(coinId, daysNum) {
         const limit = Math.min(daysNum, 2000);
-        const r = await fetchWithTimeout(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${CC_SYMS[coinId]}&tsym=USD&limit=${limit}`);
+        const r = await fetchWithTimeout('https://min-api.cryptocompare.com/data/v2/histoday?fsym=' + CC_SYMS[coinId] + '&tsym=USD&limit=' + limit);
         if (!r.ok) throw new Error(r.status);
         const j = await r.json();
         if (!j.Data?.Data?.length) throw new Error('Empty');
@@ -1422,7 +1422,322 @@
                 responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false },
                     tooltip: { callbacks: { title: it => { try { return fmtDate(new Date(it[0].raw?.x ?? it[0].parsed?.x ?? it[0].label)); } catch(e) { return ''; } }, label: it => 'RSI: ' + it.parsed.y?.toFixed(1) } },
-                    annotce().sort((a,b) => a - b);
+                    annotation: { annotations: {
+                        ob: { type: 'box', yMin: 70, yMax: 100, backgroundColor: 'rgba(255,59,92,0.05)', borderWidth: 0 },
+                        os: { type: 'box', yMin: 0, yMax: 30, backgroundColor: 'rgba(0,196,140,0.05)', borderWidth: 0 },
+                        l70: { type: 'line', yMin: 70, yMax: 70, borderColor: 'rgba(255,59,92,0.3)', borderDash: [4,4], borderWidth: 1 },
+                        l30: { type: 'line', yMin: 30, yMax: 30, borderColor: 'rgba(0,196,140,0.3)', borderDash: [4,4], borderWidth: 1 }
+                    }}
+                },
+                scales: {
+                    x: { type: 'time', time: { unit: 'month', tooltipFormat: 'dd LLL yyyy', displayFormats: { day: 'dd LLL', month: 'LLL yy', year: 'yyyy' } }, ticks: { maxTicksLimit: 6, font: { size: 10 } }, grid: { color: TH.gridColor } },
+                    y: { min: 0, max: 100, grid: { color: TH.gridColor } }
+                }
+            }
+        });
+    }
+
+    function buildZScoreChart(labels, zscore) {
+        const ctx = document.getElementById('zscoreChart').getContext('2d');
+        const bg = zscore.map(z => z === null ? TH.gridColor : z < -2 ? TH.green : z < -1 ? TH.greenBg.replace('0.15','0.5') : z > 2 ? TH.red : z > 1 ? TH.redBg.replace('0.15','0.5') : 'rgba(10,10,10,0.08)');
+        const bp = labels.length > 500 ? 1.0 : labels.length > 200 ? 0.9 : 0.8;
+        STATE.charts.zscore = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets: [{ data: zscore, backgroundColor: bg, borderWidth: 0, barPercentage: bp, categoryPercentage: 1 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false },
+                    tooltip: { callbacks: { title: it => { try { return fmtDate(new Date(it[0].raw?.x ?? it[0].parsed?.x ?? it[0].label)); } catch(e) { return ''; } }, label: it => 'Z: ' + it.parsed.y?.toFixed(2) } },
+                    annotation: { annotations: {
+                        ll: { type: 'line', yMin: -1.5, yMax: -1.5, borderColor: 'rgba(0,196,140,0.3)', borderDash: [4,4], borderWidth: 1 },
+                        lh: { type: 'line', yMin: 1.5, yMax: 1.5, borderColor: 'rgba(255,59,92,0.3)', borderDash: [4,4], borderWidth: 1 },
+                        lz: { type: 'line', yMin: 0, yMax: 0, borderColor: TH.black20, borderWidth: 1 }
+                    }}
+                },
+                scales: {
+                    x: { type: 'time', time: { unit: 'month', tooltipFormat: 'dd LLL yyyy', displayFormats: { day: 'dd LLL', month: 'LLL yy', year: 'yyyy' } }, ticks: { maxTicksLimit: 6, font: { size: 10 } }, grid: { display: false } },
+                    y: { ticks: { callback: v => v + 'σ' }, grid: { color: TH.gridColor } }
+                }
+            }
+        });
+    }
+
+    function buildCyclesTable(cycles, data, symbol) {
+        const tb = document.getElementById('cyclesBody'); tb.innerHTML = '';
+        if (cycles.length === 0) {
+            tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--rivool-gray-dark)">Nenhum ciclo de queda significativo encontrado neste período.</td></tr>';
+            return;
+        }
+        cycles.forEach((c, i) => {
+            const r = document.createElement('tr');
+            const bc = c.fall < -60 ? 'badge-red' : c.fall < -40 ? 'badge-yellow' : 'badge-blue';
+            const rc = c.returnFromBottom > 0 ? 'positive' : 'negative';
+            r.innerHTML = '<td><span class="badge ' + bc + '">#' + (i+1) + '</span></td><td>' + fmtDate(c.peakDate) + '</td><td>' + fmtDate(c.troughDate) + '</td><td>$' + fmt(c.peakPrice,0) + '</td><td>$' + fmt(c.troughPrice,0) + '</td><td style="color:var(--accent-red);font-weight:700">' + c.fall.toFixed(1) + '%</td><td>' + c.durationDays + 'd</td><td>' + (c.recoveryDays ? c.recoveryDays + 'd' : 'Em curso') + '</td><td class="' + rc + '" style="font-weight:700">' + (c.returnFromBottom >= 0 ? '+' : '') + fmt(c.returnFromBottom,0) + '%</td>';
+            tb.appendChild(r);
+        });
+    }
+
+    function buildEntryPointsChart(data, entries, symbol) {
+        const ctx = document.getElementById('entryPointsChart').getContext('2d');
+        const labels = data.map(d => d.date), prices = data.map(d => d.price);
+        const strong = entries.filter(e => e.score >= 5), mod = entries.filter(e => e.score >= 4 && e.score < 5);
+        STATE.charts.entry = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets: [
+                { label: symbol, data: prices, borderColor: TH.blue, borderWidth: 2, pointRadius: 0, tension: 0.1, fill: false },
+                { label: 'Forte', data: labels.map((_,i) => strong.find(e => e.idx===i) ? prices[i] : null), pointRadius: 10, pointBackgroundColor: TH.green, pointBorderColor: '#fff', pointBorderWidth: 2, pointStyle: 'triangle', showLine: false },
+                { label: 'Moderado', data: labels.map((_,i) => mod.find(e => e.idx===i) ? prices[i] : null), pointRadius: 7, pointBackgroundColor: TH.yellow, pointBorderColor: '#fff', pointBorderWidth: 2, showLine: false }
+            ]},
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { labels: { usePointStyle: true, padding: 20 } } },
+                scales: {
+                    x: { type: 'time', time: { unit: 'month', tooltipFormat: 'dd LLL yyyy', displayFormats: { day: 'dd LLL', month: 'LLL yy', quarter: "'Q'q yyyy", year: 'yyyy' } }, ticks: { maxTicksLimit: 12, font: { size: 11 } }, grid: { color: TH.gridColor } },
+                    y: { type: 'logarithmic', ticks: { callback: v => '$' + fmt(v,0) }, grid: { color: TH.gridColor } }
+                }
+            }
+        });
+
+        const avg = strong.filter(e => e.futureReturn !== null);
+        const ar = avg.length ? avg.reduce((a,e) => a + e.futureReturn, 0) / avg.length : 0;
+        const wr = avg.length ? avg.filter(e => e.futureReturn > 0).length / avg.length * 100 : 0;
+        document.getElementById('entryStats').innerHTML =
+            '<strong>' + entries.length + '</strong> sinais identificados. Sinais fortes (score ≥5): retorno médio 6m de <strong>' + (ar>=0?'+':'') + ar.toFixed(0) + '%</strong>, taxa de acerto <strong>' + wr.toFixed(0) + '%</strong>. Metodologia: convergência RSI&lt;30, Z&lt;-1.5σ, DD&gt;-30%. <em>Dados históricos não garantem resultados futuros.</em>';
+    }
+
+    function buildReturnDistChart(returns) {
+        const ctx = document.getElementById('returnDistChart').getContext('2d');
+        const bins = {}, step = 5;
+        returns.forEach(r => { const b = Math.floor(r/step)*step; const k = b + ' a ' + (b+step) + '%'; bins[k] = (bins[k]||0)+1; });
+        const keys = Object.keys(bins).sort((a,b) => parseFloat(a) - parseFloat(b));
+        STATE.charts.rd = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: keys, datasets: [{ data: keys.map(k => bins[k]), backgroundColor: keys.map(k => parseFloat(k)<-10?TH.red:parseFloat(k)<0?TH.yellow:TH.green), borderRadius: 4 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                scales: { x: { ticks: { font: { size: 9 }, maxRotation: 45 }, grid: { display: false } }, y: { grid: { color: TH.gridColor } } } }
+        });
+    }
+
+    function buildQuartileChart(quartiles) {
+        const ctx = document.getElementById('quartileChart').getContext('2d');
+        STATE.charts.q = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: quartiles.map(q => q.label), datasets: [{ data: quartiles.map(q => q.avgReturn), backgroundColor: quartiles.map(q => q.avgReturn > 0 ? TH.green : TH.red), borderRadius: 6 }] },
+            options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+                plugins: { legend: { display: false }, tooltip: { callbacks: { afterLabel: it => 'Win rate: ' + quartiles[it.dataIndex].winRate.toFixed(0) + '% | n=' + quartiles[it.dataIndex].count } } },
+                scales: { x: { ticks: { callback: v => v.toFixed(0) + '%' }, grid: { color: TH.gridColor } }, y: { grid: { display: false } } } }
+        });
+    }
+
+    // ========================
+    // DEEP DROP ANALYSIS BUILDER
+    // ========================
+    function buildDeepDropAnalysis(drops, condProb, returnByDrop, data, drawdown, symbol) {
+        // Clear previous drop events (keep header row)
+        const evtContainer = document.getElementById('dropEventsContainer');
+        while (evtContainer.children.length > 1) evtContainer.removeChild(evtContainer.lastChild);
+
+        // Probability cards
+        document.getElementById('probDropCount').textContent = drops.length;
+        document.getElementById('probDropDetail').textContent = 'no período de ' + fmtDate(data[0].date) + ' a ' + fmtDate(data[data.length-1].date);
+
+        const recovered = drops.filter(d => d.recovered);
+        const recovRate = drops.length ? (recovered.length / drops.length * 100) : 0;
+        document.getElementById('probRecoveryRate').textContent = recovRate.toFixed(0) + '%';
+        document.getElementById('probRecoveryRate').style.color = recovRate >= 80 ? 'var(--accent-green)' : recovRate >= 50 ? 'var(--accent-yellow)' : 'var(--accent-red)';
+        document.getElementById('probRecoveryDetail').textContent = recovered.length + ' de ' + drops.length + ' quedas recuperaram o ATH';
+
+        const avgRec = recovered.length ? recovered.reduce((a,d) => a + d.recoveryDays, 0) / recovered.length : 0;
+        document.getElementById('probAvgRecovery').textContent = avgRec ? Math.round(avgRec) + 'd' : 'N/A';
+        document.getElementById('probAvgRecoveryDetail').textContent = avgRec ? 'média de ' + Math.round(avgRec/30) + ' meses' : 'sem dados suficientes';
+
+        const dropsWithReturn = drops.filter(d => d.return1y !== null);
+        const avgRet = dropsWithReturn.length ? dropsWithReturn.reduce((a,d) => a + d.return1y, 0) / dropsWithReturn.length : 0;
+        document.getElementById('probAvgReturn').textContent = (avgRet >= 0 ? '+' : '') + avgRet.toFixed(0) + '%';
+        document.getElementById('probAvgReturn').style.color = avgRet > 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+        document.getElementById('probAvgReturnDetail').textContent = dropsWithReturn.length + ' eventos com dados de 12 meses';
+
+        // Recovery timeline chart
+        buildRecoveryTimelineChart(drops);
+
+        // Drop events detail
+        const container = document.getElementById('dropEventsContainer');
+        drops.forEach(d => {
+            const row = document.createElement('div');
+            row.className = 'drop-event-row';
+            row.innerHTML =
+                '<span>' + fmtDate(d.peakDate) + ' → ' + fmtDate(d.troughDate) + '</span>' +
+                '<span style="color:var(--accent-red);font-weight:700">' + d.fall.toFixed(1) + '%</span>' +
+                '<span>' + d.daysToBottom + ' dias</span>' +
+                '<span>' + (d.recoveryDays ? d.recoveryDays + ' dias' : '—') + '</span>' +
+                '<span style="font-weight:600;color:' + (d.return1y !== null ? (d.return1y > 0 ? 'var(--accent-green)' : 'var(--accent-red)') : 'var(--rivool-gray-dark)') + '">' + (d.return1y !== null ? (d.return1y>=0?'+':'') + d.return1y.toFixed(0) + '%' : 'N/A') + '</span>' +
+                '<span class="' + (d.recovered ? 'drop-recovered' : 'drop-ongoing') + '">' + (d.recovered ? 'Recuperou (' + fmtDate(d.recoveryDate) + ')' : 'Em curso') + '</span>';
+            container.appendChild(row);
+        });
+
+        // Conditional probability chart
+        buildConditionalProbChart(condProb);
+
+        // Return by drop band chart
+        buildReturnByDropChart(returnByDrop);
+
+        // Summary
+        const prob50 = condProb.find(c => c.threshold === -50);
+        document.getElementById('deepAnalysisSummary').innerHTML =
+            '<strong>Resumo Estatístico:</strong> O ' + symbol + ' caiu 50% ou mais <strong>' + drops.length + ' vezes</strong> no período analisado. ' +
+            'Em <strong>' + recovRate.toFixed(0) + '%</strong> dos casos, o preço retornou ao ATH anterior. ' +
+            'O tempo médio de recuperação foi de <strong>' + (avgRec ? Math.round(avgRec) + ' dias (' + Math.round(avgRec/30) + ' meses)' : 'N/A') + '</strong>. ' +
+            (prob50 && prob50.prob12m !== null ?
+                'Após cruzar a marca de -50%, a probabilidade de estar positivo em 12 meses foi de <strong>' + prob50.prob12m.toFixed(0) + '%</strong> (n=' + prob50.samples + '). ' : '') +
+            'O retorno médio 1 ano após o fundo foi de <strong>' + (avgRet>=0?'+':'') + avgRet.toFixed(0) + '%</strong>. ' +
+            '<br><em>Conclusão: historicamente, quedas severas (≥50%) representaram oportunidades de compra com alta probabilidade de recuperação, embora o tempo de espera possa ser significativo.</em>';
+    }
+
+    function buildRecoveryTimelineChart(drops) {
+        const ctx = document.getElementById('recoveryTimelineChart').getContext('2d');
+        const labels = drops.map((d,i) => 'Queda #' + (i+1) + ' (' + d.fall.toFixed(0) + '%)');
+        STATE.charts.timeline = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Queda (dias)', data: drops.map(d => d.daysToBottom), backgroundColor: TH.red, borderRadius: 4 },
+                    { label: 'Recuperação (dias)', data: drops.map(d => d.recoveryDays || 0), backgroundColor: drops.map(d => d.recovered ? TH.green : TH.yellow), borderRadius: 4 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+                plugins: { legend: { labels: { usePointStyle: true, padding: 16 } },
+                    tooltip: { callbacks: { afterLabel: it => it.datasetIndex === 1 && !drops[it.dataIndex].recovered ? '(ainda em recuperação)' : '' } }
+                },
+                scales: {
+                    x: { stacked: true, ticks: { callback: v => v + 'd' }, grid: { color: TH.gridColor } },
+                    y: { stacked: true, grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function buildConditionalProbChart(condProb) {
+        const ctx = document.getElementById('conditionalProbChart').getContext('2d');
+        const labels = condProb.map(c => c.threshold + '%');
+        STATE.charts.condProb = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    { label: '3 meses', data: condProb.map(c => c.prob3m), backgroundColor: TH.blueLight, borderRadius: 4 },
+                    { label: '6 meses', data: condProb.map(c => c.prob6m), backgroundColor: TH.blue, borderRadius: 4 },
+                    { label: '12 meses', data: condProb.map(c => c.prob12m), backgroundColor: TH.green, borderRadius: 4 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { labels: { usePointStyle: true, padding: 16 } },
+                    tooltip: { callbacks: { afterLabel: it => 'n=' + condProb[it.dataIndex].samples } }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: TH.gridColor } }
+                }
+            }
+        });
+    }
+
+    function buildReturnByDropChart(returnByDrop) {
+        const ctx = document.getElementById('returnByDropChart').getContext('2d');
+        STATE.charts.retDrop = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: returnByDrop.map(b => b.label),
+                datasets: [{ label: 'Retorno médio 12m', data: returnByDrop.map(b => b.avgReturn), backgroundColor: returnByDrop.map(b => b.avgReturn > 0 ? TH.green : TH.red), borderRadius: 6 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false },
+                    tooltip: { callbacks: { afterLabel: it => 'Amostras: ' + returnByDrop[it.dataIndex].count + ' | Mediana: ' + returnByDrop[it.dataIndex].medianReturn.toFixed(0) + '%' } }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { ticks: { callback: v => v.toFixed(0) + '%' }, grid: { color: TH.gridColor } }
+                }
+            }
+        });
+    }
+
+    // ========================
+    // EVENT HANDLERS
+    // ========================
+    document.getElementById('coinSelector').addEventListener('click', e => {
+        if (e.target.classList.contains('control-btn')) {
+            document.querySelectorAll('#coinSelector .control-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            STATE.coin = e.target.dataset.coin;
+            // Clear drop events before reload
+            const c = document.getElementById('dropEventsContainer');
+            while (c.children.length > 1) c.removeChild(c.lastChild);
+            loadData();
+        }
+    });
+
+    document.getElementById('periodSelector').addEventListener('click', e => {
+        if (e.target.classList.contains('control-btn')) {
+            document.querySelectorAll('#periodSelector .control-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            STATE.period = e.target.dataset.period === 'max' ? 'max' : parseInt(e.target.dataset.period);
+            const c = document.getElementById('dropEventsContainer');
+            while (c.children.length > 1) c.removeChild(c.lastChild);
+            loadData();
+        }
+    });
+
+    // ========================
+    // MAIN LOAD
+    // ========================
+    async function loadData() {
+        if (isLoading) return;
+        isLoading = true;
+        const overlay = document.getElementById('loadingOverlay');
+        const lt = document.querySelector('.loading-text');
+        overlay.classList.remove('hidden');
+        lt.textContent = 'Buscando dados históricos...';
+
+        try {
+            const coinId = COIN_IDS[STATE.coin];
+            lt.textContent = 'Carregando ' + COIN_SYMBOLS[STATE.coin] + '...';
+            const data = await fetchCoinData(coinId, STATE.period);
+            STATE.data[STATE.coin] = data;
+            lt.textContent = 'Calculando indicadores e renderizando...';
+            await new Promise(r => setTimeout(r, 50)); // allow UI update
+            buildCharts(data, STATE.coin);
+
+            document.getElementById('lastUpdate').textContent = 'Atualizado ' + new Date().toLocaleString('pt-BR') + ' | Fontes: CoinGecko / CoinCap / CryptoCompare';
+            document.getElementById('footerDate').textContent = new Date().toLocaleDateString('pt-BR');
+            document.getElementById('errorMsg').style.display = 'none';
+        } catch (err) {
+            console.error(err);
+            document.getElementById('errorMsg').innerHTML = '<strong>Erro:</strong> ' + err.message + '<br><small>Verifique sua conexão e recarregue.</small>';
+            document.getElementById('errorMsg').style.display = 'block';
+        } finally {
+            isLoading = false;
+            setTimeout(() => overlay.classList.add('hidden'), 400);
+        }
+    }
+
+    // ========================
+    // ENTRY POINT SIMULATOR
+    // ========================
+    let simChart = null;
+
+    document.getElementById('simAssetSelector').addEventListener('click', e => {
+        if (e.target.classList.contains('control-btn')) {
+            document.querySelectorAll('#simAssetSelector .control-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+        }
+    });
+
+    function simPctl(arr, p) {
+        const s = arr.slice().sort((a,b) => a - b);
         const idx = (p / 100) * (s.length - 1);
         const lo = Math.floor(idx), hi = Math.ceil(idx);
         return lo === hi ? s[lo] : s[lo] + (s[hi] - s[lo]) * (idx - lo);
@@ -1586,7 +1901,7 @@
 
         // Safest Entry Price: find the drawdown level with the best risk/reward
         // We scan historical drawdown levels and for each, compute the 1y median return and probability of being positive
-        // The safest entry is the one with the best combination of high prob(+) and high median return
+        // The "safest" entry is the one with the best combination of high prob(+) and high median return
         const ddLevels = [-20, -30, -40, -50, -60, -70, -80];
         let bestScore = -Infinity, safestDD = ddAtPurchase, safestProb = 0, safestMedRet = 0, safestN = 0;
         ddLevels.forEach(ddLevel => {
@@ -1726,7 +2041,7 @@
         start.setDate(start.getDate() - days);
         const f = d => d.toISOString().split('T')[0];
         const symbols = FX_CURRENCIES.join(',');
-        const url = `https://api.frankfurter.app/${f(start)}..${f(end)}?from=USD&to=${symbols}`;
+        const url = 'https://api.frankfurter.app/' + f(start) + '..' + f(end) + '?from=USD&to=' + symbols;
         const r = await fetchWithTimeout(url, {}, 15000);
         if (!r.ok) throw new Error('Frankfurter API: ' + r.status);
         const j = await r.json();
