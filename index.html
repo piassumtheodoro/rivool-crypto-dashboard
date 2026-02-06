@@ -1,0 +1,2032 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTC & ETH - Ciclos de Queda & Pontos de Entrada</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+    <style>
+        /* ==========================================
+           RIVOOL DESIGN SYSTEM
+           Font: DM Sans (proxy for Galano Grotesque)
+           Intense Blue: #0541FE
+           Soft Black: #0A0A0A
+           Pure White: #FFFFFF
+           Soft Gray: #F6F2F6
+           ========================================== */
+        :root {
+            --rivool-blue: #0541FE;
+            --rivool-blue-light: #3366FF;
+            --rivool-blue-dark: #0330C0;
+            --rivool-blue-10: rgba(5,65,254,0.10);
+            --rivool-blue-20: rgba(5,65,254,0.20);
+            --rivool-blue-40: rgba(5,65,254,0.40);
+            --rivool-black: #0A0A0A;
+            --rivool-black-80: rgba(10,10,10,0.80);
+            --rivool-black-60: rgba(10,10,10,0.60);
+            --rivool-black-40: rgba(10,10,10,0.40);
+            --rivool-black-20: rgba(10,10,10,0.20);
+            --rivool-white: #FFFFFF;
+            --rivool-gray: #F6F2F6;
+            --rivool-gray-mid: #E8E4E8;
+            --rivool-gray-dark: #9A959A;
+
+            --accent-green: #00C48C;
+            --accent-green-bg: rgba(0,196,140,0.10);
+            --accent-red: #FF3B5C;
+            --accent-red-bg: rgba(255,59,92,0.10);
+            --accent-yellow: #FFB020;
+            --accent-yellow-bg: rgba(255,176,32,0.10);
+
+            --shadow-sm: 0 1px 3px rgba(10,10,10,0.06);
+            --shadow-md: 0 4px 16px rgba(10,10,10,0.08);
+            --shadow-lg: 0 8px 32px rgba(10,10,10,0.12);
+            --radius: 16px;
+            --radius-sm: 10px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--rivool-gray);
+            color: var(--rivool-black);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .dashboard {
+            max-width: 1480px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        /* ---- HEADER ---- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .header-left h1 {
+            font-size: 30px;
+            font-weight: 700;
+            color: var(--rivool-black);
+            letter-spacing: -0.5px;
+        }
+
+        .header-left h1 span { color: var(--rivool-blue); }
+
+        .header-left p {
+            color: var(--rivool-gray-dark);
+            font-size: 14px;
+            margin-top: 4px;
+            font-weight: 400;
+        }
+
+        .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .control-group {
+            display: flex;
+            gap: 3px;
+            background: var(--rivool-white);
+            border-radius: var(--radius-sm);
+            padding: 3px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .control-btn {
+            padding: 8px 18px;
+            border: none;
+            background: transparent;
+            color: var(--rivool-black-60);
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover { color: var(--rivool-black); background: var(--rivool-gray); }
+        .control-btn.active { background: var(--rivool-blue); color: var(--rivool-white); }
+
+        /* ---- KPIs ---- */
+        .kpis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .kpi-card {
+            background: var(--rivool-white);
+            border-radius: var(--radius);
+            padding: 22px;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--rivool-blue-10); }
+
+        .kpi-label {
+            font-size: 11px;
+            color: var(--rivool-gray-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .kpi-value { font-size: 26px; font-weight: 700; color: var(--rivool-black); }
+        .kpi-sub { font-size: 13px; margin-top: 6px; font-weight: 500; }
+        .kpi-sub.positive { color: var(--accent-green); }
+        .kpi-sub.negative { color: var(--accent-red); }
+
+        /* ---- CARDS ---- */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+
+        .chart-card {
+            background: var(--rivool-white);
+            border-radius: var(--radius);
+            padding: 28px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .chart-card h3 {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--rivool-black);
+            margin-bottom: 4px;
+        }
+
+        .chart-card .subtitle {
+            font-size: 13px;
+            color: var(--rivool-gray-dark);
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .chart-container { position: relative; width: 100%; height: 400px; }
+        .chart-container.tall { height: 300px; }
+
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+
+        /* ---- LEGENDS ---- */
+        .legend-custom { display: flex; gap: 20px; margin-top: 14px; flex-wrap: wrap; }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--rivool-black-60);
+            font-weight: 500;
+        }
+
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .legend-line { width: 20px; height: 3px; border-radius: 2px; }
+
+        /* ---- TABLE ---- */
+        .cycles-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+        .cycles-table th {
+            text-align: left;
+            padding: 14px 16px;
+            color: var(--rivool-gray-dark);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.8px;
+            border-bottom: 2px solid var(--rivool-gray);
+            background: var(--rivool-gray);
+        }
+
+        .cycles-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--rivool-gray-mid);
+            font-weight: 400;
+        }
+
+        .cycles-table tr:hover td { background: var(--rivool-blue-10); }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .badge-red { background: var(--accent-red-bg); color: var(--accent-red); }
+        .badge-green { background: var(--accent-green-bg); color: var(--accent-green); }
+        .badge-yellow { background: var(--accent-yellow-bg); color: var(--accent-yellow); }
+        .badge-blue { background: var(--rivool-blue-10); color: var(--rivool-blue); }
+
+        /* ---- PROBABILITY SECTION ---- */
+        .prob-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 18px;
+            margin-top: 20px;
+        }
+
+        .prob-card {
+            background: var(--rivool-gray);
+            border-radius: var(--radius-sm);
+            padding: 24px;
+            text-align: center;
+            border: 1px solid var(--rivool-gray-mid);
+        }
+
+        .prob-card .prob-value {
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--rivool-blue);
+            line-height: 1;
+        }
+
+        .prob-card .prob-label {
+            font-size: 13px;
+            color: var(--rivool-gray-dark);
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        .prob-card .prob-detail {
+            font-size: 12px;
+            color: var(--rivool-black-40);
+            margin-top: 6px;
+        }
+
+        .timeline-bar {
+            display: flex;
+            align-items: stretch;
+            height: 48px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 16px 0;
+        }
+
+        .timeline-segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--rivool-white);
+            min-width: 32px;
+            transition: flex 0.3s;
+        }
+
+        .stat-highlight {
+            background: var(--rivool-blue-10);
+            border: 1px solid var(--rivool-blue-20);
+            border-radius: var(--radius-sm);
+            padding: 20px;
+            margin-top: 16px;
+        }
+
+        .stat-highlight p {
+            font-size: 14px;
+            color: var(--rivool-black-80);
+            line-height: 1.7;
+        }
+
+        .stat-highlight strong { color: var(--rivool-blue); }
+
+        .drop-event-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1.5fr;
+            gap: 8px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--rivool-gray-mid);
+            font-size: 13px;
+            align-items: center;
+        }
+
+        .drop-event-row.header {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--rivool-gray-dark);
+            border-bottom: 2px solid var(--rivool-gray-mid);
+        }
+
+        .drop-recovered { color: var(--accent-green); font-weight: 600; }
+        .drop-ongoing { color: var(--accent-yellow); font-weight: 600; }
+
+        /* ---- LOADING ---- */
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--rivool-white);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.5s;
+        }
+
+        .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+
+        .spinner {
+            width: 48px; height: 48px;
+            border: 3px solid var(--rivool-gray-mid);
+            border-top-color: var(--rivool-blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-text { color: var(--rivool-gray-dark); margin-top: 16px; font-size: 14px; font-weight: 500; }
+
+        .error-msg {
+            background: var(--accent-red-bg);
+            border: 1px solid rgba(255,59,92,0.25);
+            color: var(--accent-red);
+            padding: 18px;
+            border-radius: var(--radius-sm);
+            text-align: center;
+            display: none;
+            font-size: 14px;
+        }
+
+        /* ---- SECTION DIVIDER ---- */
+        .section-divider {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 36px 0 20px;
+        }
+
+        .section-divider .line { flex: 1; height: 2px; background: var(--rivool-blue-20); border-radius: 1px; }
+
+        .section-divider h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--rivool-black);
+            white-space: nowrap;
+        }
+
+        .section-divider h2 span { color: var(--rivool-blue); }
+
+        /* ---- FOOTER ---- */
+        footer {
+            text-align: center;
+            padding: 40px 0 20px;
+            color: var(--rivool-gray-dark);
+            font-size: 12px;
+            font-weight: 400;
+        }
+
+        footer a { color: var(--rivool-blue); text-decoration: none; }
+
+        /* ---- RESPONSIVE ---- */
+        @media (max-width: 900px) {
+            .two-col { grid-template-columns: 1fr; }
+            .dashboard { padding: 16px; }
+            .header-left h1 { font-size: 22px; }
+            .kpis { grid-template-columns: repeat(2, 1fr); }
+            .prob-grid { grid-template-columns: 1fr; }
+            .drop-event-row { font-size: 11px; grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr 1fr; }
+        }
+
+        @media (max-width: 600px) {
+            .kpis { grid-template-columns: 1fr; }
+            .drop-event-row { grid-template-columns: 1fr 1fr; gap: 4px; }
+            .sim-form-wrap { flex-direction: column !important; }
+            .sim-form-wrap input, .sim-form-wrap button { width: 100% !important; max-width: 100% !important; }
+            #simRiskRewardPanel { grid-template-columns: 1fr !important; }
+        }
+        @media (min-width: 601px) and (max-width: 900px) {
+            #simRiskRewardPanel { grid-template-columns: 1fr 1fr !important; }
+        }
+
+        /* Scroll offset for simulation results */
+        #simResults { scroll-margin-top: 24px; }
+
+        /* Forex loading overlay */
+        .fx-loading {
+            display: flex; align-items: center; justify-content: center;
+            gap: 12px; padding: 40px; color: var(--rivool-gray-dark);
+            font-size: 14px; font-weight: 500;
+        }
+        .fx-loading .spinner-sm {
+            width: 24px; height: 24px;
+            border: 2px solid var(--rivool-gray-mid);
+            border-top-color: var(--rivool-blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Carregando dados históricos...</div>
+    </div>
+
+    <div class="dashboard">
+        <header>
+            <div class="header-left">
+                <h1>Ciclos de Queda <span>&</span> Pontos de Entrada</h1>
+                <p id="lastUpdate">Análise estatística de BTC e ETH</p>
+            </div>
+            <div class="controls">
+                <div class="control-group" id="coinSelector">
+                    <button class="control-btn active" data-coin="btc">BTC</button>
+                    <button class="control-btn" data-coin="eth">ETH</button>
+                </div>
+                <div class="control-group" id="periodSelector">
+                    <button class="control-btn" data-period="365">1A</button>
+                    <button class="control-btn" data-period="730">2A</button>
+                    <button class="control-btn active" data-period="1825">5A</button>
+                    <button class="control-btn" data-period="max">Max</button>
+                </div>
+            </div>
+        </header>
+
+        <div id="errorMsg" class="error-msg"></div>
+
+        <!-- KPIs -->
+        <section class="kpis" id="kpiSection">
+            <div class="kpi-card">
+                <div class="kpi-label">Preço Atual</div>
+                <div class="kpi-value" id="kpiPrice">--</div>
+                <div class="kpi-sub" id="kpiPriceChange">--</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Máxima Histórica (ATH)</div>
+                <div class="kpi-value" id="kpiATH">--</div>
+                <div class="kpi-sub" id="kpiATHDist">--</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Maior Drawdown</div>
+                <div class="kpi-value" id="kpiMaxDD" style="color: var(--accent-red)">--</div>
+                <div class="kpi-sub" id="kpiMaxDDDate">--</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">RSI (14 dias)</div>
+                <div class="kpi-value" id="kpiRSI">--</div>
+                <div class="kpi-sub" id="kpiRSISignal">--</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Desvio da Média (200d)</div>
+                <div class="kpi-value" id="kpiDeviation">--</div>
+                <div class="kpi-sub" id="kpiDeviationSignal">--</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Sinal de Entrada</div>
+                <div class="kpi-value" id="kpiEntrySignal">--</div>
+                <div class="kpi-sub" id="kpiEntryDetail">Baseado em múltiplos indicadores</div>
+            </div>
+        </section>
+
+        <!-- CHARTS -->
+        <section class="charts-grid">
+            <div class="chart-card">
+                <h3>Preço & Zonas de Drawdown</h3>
+                <div class="subtitle">Áreas vermelhas mostram quedas desde a máxima local. Marcadores verdes indicam pontos de entrada estatísticos.</div>
+                <div class="chart-container" style="height: 450px;">
+                    <canvas id="priceDrawdownChart"></canvas>
+                </div>
+                <div class="legend-custom">
+                    <div class="legend-item"><div class="legend-line" style="background:var(--rivool-blue)"></div> Preço</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:rgba(255,59,92,0.3)"></div> Drawdown &gt;30%</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-green)"></div> Ponto de Entrada</div>
+                    <div class="legend-item"><div class="legend-line" style="background:var(--rivool-black-40); border-style:dashed;"></div> MA 200</div>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h3>Drawdown desde ATH local (%)</h3>
+                <div class="subtitle">Distância percentual do preço em relação à máxima mais recente. Quedas abaixo de -50% historicamente marcam zonas de acumulação.</div>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="drawdownChart"></canvas>
+                </div>
+            </div>
+
+            <div class="two-col">
+                <div class="chart-card">
+                    <h3>RSI (14 períodos)</h3>
+                    <div class="subtitle">Sobrecompra (&gt;70) e sobrevenda (&lt;30) sinalizam reversões.</div>
+                    <div class="chart-container tall"><canvas id="rsiChart"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3>Z-Score do Preço (200 dias)</h3>
+                    <div class="subtitle">Desvios-padrão da média. Abaixo de -1.5 indica oportunidade.</div>
+                    <div class="chart-container tall"><canvas id="zscoreChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- CYCLES TABLE -->
+            <div class="chart-card">
+                <h3>Maiores Ciclos de Queda</h3>
+                <div class="subtitle">Ciclos ordenados por magnitude da queda.</div>
+                <div style="overflow-x: auto; margin-top: 12px;">
+                    <table class="cycles-table" id="cyclesTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Topo</th>
+                                <th>Fundo</th>
+                                <th>Preço Topo</th>
+                                <th>Preço Fundo</th>
+                                <th>Queda</th>
+                                <th>Duração</th>
+                                <th>Recuperação</th>
+                                <th>Retorno do Fundo</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cyclesBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ENTRY POINTS -->
+            <div class="chart-card">
+                <h3>Histórico de Sinais de Entrada</h3>
+                <div class="subtitle">Pontos onde RSI, Z-Score e Drawdown convergiram para sinalizar oportunidade.</div>
+                <div class="chart-container" style="height: 400px;">
+                    <canvas id="entryPointsChart"></canvas>
+                </div>
+                <div class="stat-highlight">
+                    <p id="entryStats">Carregando análise...</p>
+                </div>
+            </div>
+
+            <div class="two-col">
+                <div class="chart-card">
+                    <h3>Distribuição de Retornos Mensais</h3>
+                    <div class="subtitle">Histograma para avaliar dispersão e risco.</div>
+                    <div class="chart-container tall"><canvas id="returnDistChart"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3>Retorno por Quartil de Entrada</h3>
+                    <div class="subtitle">Retorno médio em 6 meses conforme o Z-Score na compra.</div>
+                    <div class="chart-container tall"><canvas id="quartileChart"></canvas></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================================================
+             NOVA SEÇÃO: ANÁLISE DE QUEDAS ≥50%
+             ================================================ -->
+        <div class="section-divider">
+            <div class="line"></div>
+            <h2>Análise de Quedas <span>≥ 50%</span></h2>
+            <div class="line"></div>
+        </div>
+
+        <section class="charts-grid" id="deepAnalysisSection">
+            <!-- Probability Cards -->
+            <div class="prob-grid" id="probCards">
+                <div class="prob-card">
+                    <div class="prob-value" id="probDropCount">--</div>
+                    <div class="prob-label">Vezes que caiu 50% ou mais</div>
+                    <div class="prob-detail" id="probDropDetail">no período analisado</div>
+                </div>
+                <div class="prob-card">
+                    <div class="prob-value" id="probRecoveryRate">--%</div>
+                    <div class="prob-label">Probabilidade de recuperar o ATH</div>
+                    <div class="prob-detail" id="probRecoveryDetail">baseado em ciclos históricos</div>
+                </div>
+                <div class="prob-card">
+                    <div class="prob-value" id="probAvgRecovery">-- d</div>
+                    <div class="prob-label">Tempo médio de recuperação</div>
+                    <div class="prob-detail" id="probAvgRecoveryDetail">dias até voltar ao preço pré-queda</div>
+                </div>
+                <div class="prob-card">
+                    <div class="prob-value" id="probAvgReturn">--%</div>
+                    <div class="prob-label">Retorno médio 1 ano após o fundo</div>
+                    <div class="prob-detail" id="probAvgReturnDetail">se comprasse no ponto mais baixo</div>
+                </div>
+            </div>
+
+            <!-- Recovery Timeline Chart -->
+            <div class="chart-card">
+                <h3>Linha do Tempo: Quedas ≥50% e Recuperação</h3>
+                <div class="subtitle">Cada barra mostra a duração da queda (vermelho) e da recuperação (verde). Barras amarelas indicam recuperação ainda em andamento.</div>
+                <div class="chart-container" style="height: 320px;">
+                    <canvas id="recoveryTimelineChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Detailed Drops Table -->
+            <div class="chart-card">
+                <h3>Detalhamento: Cada Queda ≥ 50%</h3>
+                <div class="subtitle">Análise individual de cada evento com probabilidade condicional de subida.</div>
+                <div id="dropEventsContainer" style="margin-top: 12px;">
+                    <div class="drop-event-row header">
+                        <span>Período</span>
+                        <span>Queda Máx.</span>
+                        <span>Dias até Fundo</span>
+                        <span>Dias Recuperação</span>
+                        <span>Retorno 1 Ano</span>
+                        <span>Status</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conditional Probability -->
+            <div class="two-col">
+                <div class="chart-card">
+                    <h3>Probabilidade de Subir após Queda</h3>
+                    <div class="subtitle">Dado que o ativo caiu X%, qual a probabilidade de estar positivo em 3m, 6m e 12m?</div>
+                    <div class="chart-container tall"><canvas id="conditionalProbChart"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3>Retorno Médio após Quedas por Faixa</h3>
+                    <div class="subtitle">Retorno médio em 12 meses agrupado por magnitude da queda.</div>
+                    <div class="chart-container tall"><canvas id="returnByDropChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Summary Insight -->
+            <div class="chart-card">
+                <div class="stat-highlight" style="margin-top:0">
+                    <p id="deepAnalysisSummary">Carregando análise profunda...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================================================
+             SEÇÃO: SIMULADOR DE ENTRADA
+             ================================================ -->
+        <div class="section-divider">
+            <div class="line"></div>
+            <h2>Simulador de <span>Entrada</span></h2>
+            <div class="line"></div>
+        </div>
+
+        <section class="charts-grid">
+            <div class="chart-card">
+                <h3>Simule seu Ponto de Entrada</h3>
+                <div class="subtitle">Informe o ativo, preço de compra e data. O simulador encontra todos os momentos históricos com drawdown similar e projeta cenários baseados em dados reais.</div>
+                <div class="sim-form-wrap" style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-top:20px;">
+                    <div>
+                        <div style="font-size:11px;font-weight:600;color:var(--rivool-gray-dark);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">Ativo</div>
+                        <div class="control-group" id="simAssetSelector">
+                            <button class="control-btn active" data-sim="btc">BTC</button>
+                            <button class="control-btn" data-sim="eth">ETH</button>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:11px;font-weight:600;color:var(--rivool-gray-dark);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">Preço de Compra (USD)</div>
+                        <input type="number" id="simPrice" placeholder="65000" style="padding:9px 16px;border:2px solid var(--rivool-gray-mid);border-radius:8px;font-family:inherit;font-size:14px;width:160px;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='#0541FE'" onblur="this.style.borderColor='#E8E4E8'" />
+                    </div>
+                    <div>
+                        <div style="font-size:11px;font-weight:600;color:var(--rivool-gray-dark);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">Data da Compra</div>
+                        <input type="date" id="simDate" style="padding:9px 16px;border:2px solid var(--rivool-gray-mid);border-radius:8px;font-family:inherit;font-size:14px;width:170px;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='#0541FE'" onblur="this.style.borderColor='#E8E4E8'" />
+                    </div>
+                    <button id="simRunBtn" onclick="runSimulation()" style="padding:10px 32px;background:#0541FE;color:white;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;" onmouseover="this.style.background='#0330C0'" onmouseout="this.style.background='#0541FE'">Simular</button>
+                </div>
+                <div id="simError" style="display:none;margin-top:16px;padding:14px;background:rgba(255,59,92,0.08);border:1px solid rgba(255,59,92,0.2);border-radius:8px;color:#FF3B5C;font-size:13px;"></div>
+                <div id="simTip" style="margin-top:12px;font-size:12px;color:var(--rivool-gray-dark);">Dica: para resultados mais robustos, selecione o período <strong>Max</strong> nos controles de BTC/ETH acima.</div>
+            </div>
+        </section>
+
+        <div id="simResults" style="display:none;">
+            <section class="kpis" style="margin-bottom:18px;">
+                <div class="kpi-card">
+                    <div class="kpi-label">Seu P&L Atual</div>
+                    <div class="kpi-value" id="simPnl">--</div>
+                    <div class="kpi-sub" id="simPnlDetail">--</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Drawdown na Compra</div>
+                    <div class="kpi-value" id="simDD" style="color:var(--accent-red)">--</div>
+                    <div class="kpi-sub" id="simDDDetail">distância do ATH na data</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Situações Similares</div>
+                    <div class="kpi-value" id="simAnalogues" style="color:#0541FE">--</div>
+                    <div class="kpi-sub" id="simAnaloguesDetail">encontradas no histórico</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Prob. Positivo em 1 Ano</div>
+                    <div class="kpi-value" id="simProb1y">--</div>
+                    <div class="kpi-sub" id="simProb1yDetail">baseado em análogos</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Prob. Cair mais 20%</div>
+                    <div class="kpi-value" id="simProbDD">--</div>
+                    <div class="kpi-sub" id="simProbDDDetail">risco adicional</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Prob. Dobrar (2x)</div>
+                    <div class="kpi-value" id="simProb2x">--</div>
+                    <div class="kpi-sub" id="simProb2xDetail">em até 1 ano</div>
+                </div>
+            </section>
+
+            <!-- Resumo de Risco / Retorno / Entrada Ideal -->
+            <div id="simRiskRewardPanel" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;">
+                <div class="chart-card" style="margin-bottom:0;text-align:center;padding:24px 16px;">
+                    <div style="font-size:12px;font-weight:600;color:var(--accent-red);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Perda Máxima Estimada</div>
+                    <div id="simMaxLossValue" style="font-size:28px;font-weight:700;color:var(--accent-red);line-height:1.2;">--</div>
+                    <div id="simMaxLossDetail" style="font-size:12px;color:var(--rivool-gray-dark);margin-top:6px;">--</div>
+                    <div id="simMaxLossBar" style="margin-top:12px;height:6px;border-radius:3px;background:var(--rivool-gray-mid);overflow:hidden;">
+                        <div id="simMaxLossBarFill" style="height:100%;border-radius:3px;background:var(--accent-red);width:0%;transition:width 0.5s;"></div>
+                    </div>
+                </div>
+                <div class="chart-card" style="margin-bottom:0;text-align:center;padding:24px 16px;">
+                    <div style="font-size:12px;font-weight:600;color:var(--accent-green);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Ganho Máximo Estimado</div>
+                    <div id="simMaxGainValue" style="font-size:28px;font-weight:700;color:var(--accent-green);line-height:1.2;">--</div>
+                    <div id="simMaxGainDetail" style="font-size:12px;color:var(--rivool-gray-dark);margin-top:6px;">--</div>
+                    <div id="simMaxGainBar" style="margin-top:12px;height:6px;border-radius:3px;background:var(--rivool-gray-mid);overflow:hidden;">
+                        <div id="simMaxGainBarFill" style="height:100%;border-radius:3px;background:var(--accent-green);width:0%;transition:width 0.5s;"></div>
+                    </div>
+                </div>
+                <div class="chart-card" style="margin-bottom:0;text-align:center;padding:24px 16px;border:2px solid var(--rivool-blue-10);">
+                    <div style="font-size:12px;font-weight:600;color:var(--rivool-blue);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Entrada Mais Segura</div>
+                    <div id="simSafeEntryValue" style="font-size:28px;font-weight:700;color:var(--rivool-blue);line-height:1.2;">--</div>
+                    <div id="simSafeEntryDetail" style="font-size:12px;color:var(--rivool-gray-dark);margin-top:6px;">--</div>
+                    <div id="simSafeEntryNote" style="font-size:11px;color:var(--rivool-blue);margin-top:10px;padding:6px 10px;background:var(--rivool-blue-10);border-radius:8px;display:none;">--</div>
+                </div>
+            </div>
+
+            <section class="charts-grid" style="margin-bottom:24px;">
+                <div class="chart-card">
+                    <h3 id="simFanTitle">Cone de Probabilidade — Cenários Históricos</h3>
+                    <div class="subtitle">Baseado em momentos passados com drawdown similar. Faixa clara: P10-P90. Faixa escura: P25-P75. Linha azul: mediana histórica. Linha verde: seu caminho real.</div>
+                    <div class="chart-container" style="height: 420px;">
+                        <canvas id="simFanChart"></canvas>
+                    </div>
+                    <div class="legend-custom">
+                        <div class="legend-item"><div class="legend-dot" style="background:rgba(5,65,254,0.10)"></div> P10-P90</div>
+                        <div class="legend-item"><div class="legend-dot" style="background:rgba(5,65,254,0.22)"></div> P25-P75</div>
+                        <div class="legend-item"><div class="legend-line" style="background:#0541FE"></div> Mediana</div>
+                        <div class="legend-item"><div class="legend-line" style="background:#00C48C;border-width:3px"></div> Seu Caminho</div>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3>Análise de Probabilidade por Horizonte</h3>
+                    <div class="subtitle">Retornos projetados para diferentes horizontes de tempo, baseados em análogos históricos.</div>
+                    <div style="overflow-x:auto;margin-top:12px;">
+                        <table class="cycles-table" id="simProbTable">
+                            <thead>
+                                <tr>
+                                    <th>Horizonte</th>
+                                    <th>Prob. Positivo</th>
+                                    <th>Retorno Médio</th>
+                                    <th>Retorno Mediano</th>
+                                    <th>Melhor Caso</th>
+                                    <th>Pior Caso</th>
+                                    <th>Amostras</th>
+                                </tr>
+                            </thead>
+                            <tbody id="simProbBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="stat-highlight" style="margin-top:0">
+                        <p id="simSummary">--</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ================================================
+             SEÇÃO: ANÁLISE CAMBIAL - DÓLAR x MOEDAS EMERGENTES
+             ================================================ -->
+        <div class="section-divider">
+            <div class="line"></div>
+            <h2>Dólar <span>x</span> Real & Moedas Emergentes</h2>
+            <div class="line"></div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+            <div class="control-group" id="fxSelector">
+                <button class="control-btn active" data-fx="BRL">BRL</button>
+                <button class="control-btn" data-fx="MXN">MXN</button>
+                <button class="control-btn" data-fx="ZAR">ZAR</button>
+                <button class="control-btn" data-fx="TRY">TRY</button>
+                <button class="control-btn" data-fx="INR">INR</button>
+            </div>
+            <div class="control-group" id="fxPeriodSelector">
+                <button class="control-btn" data-fxp="365">1A</button>
+                <button class="control-btn" data-fxp="730">2A</button>
+                <button class="control-btn active" data-fxp="1825">5A</button>
+                <button class="control-btn" data-fxp="3650">10A</button>
+            </div>
+        </div>
+
+        <div id="fxLoadingOverlay" class="fx-loading">
+            <div class="spinner-sm"></div>
+            <span>Carregando dados cambiais...</span>
+        </div>
+
+        <section class="kpis" id="fxKpiSection" style="display:none;">
+            <div class="kpi-card">
+                <div class="kpi-label">Taxa Atual</div>
+                <div class="kpi-value" id="fxKpiRate">--</div>
+                <div class="kpi-sub" id="fxKpiRateChange">--</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Var. YTD</div>
+                <div class="kpi-value" id="fxKpiYTD">--</div>
+                <div class="kpi-sub" id="fxKpiYTDLabel">acumulado no ano</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Var. 12 meses</div>
+                <div class="kpi-value" id="fxKpi12m">--</div>
+                <div class="kpi-sub" id="fxKpi12mLabel">--</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Pior taxa no período</div>
+                <div class="kpi-value" id="fxKpiWorst" style="color: var(--accent-red)">--</div>
+                <div class="kpi-sub" id="fxKpiWorstDate">--</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Melhor taxa no período</div>
+                <div class="kpi-value" id="fxKpiBest" style="color: var(--accent-green)">--</div>
+                <div class="kpi-sub" id="fxKpiBestDate">--</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Volatilidade Anual</div>
+                <div class="kpi-value" id="fxKpiVol">--</div>
+                <div class="kpi-sub" id="fxKpiVolLabel">desvio padrão anualizado</div>
+            </div>
+        </section>
+
+        <section class="charts-grid" id="fxChartsSection">
+            <div class="chart-card">
+                <h3 id="fxMainChartTitle">USD/BRL — Histórico & Médias Móveis</h3>
+                <div class="subtitle" id="fxMainChartSub">Quanto maior o valor, mais desvalorizado o Real. Linhas tracejadas mostram MA50 e MA200.</div>
+                <div class="chart-container" style="height: 420px;">
+                    <canvas id="fxMainChart"></canvas>
+                </div>
+                <div class="legend-custom">
+                    <div class="legend-item"><div class="legend-line" style="background:var(--rivool-blue)"></div> Taxa</div>
+                    <div class="legend-item"><div class="legend-line" style="background:var(--accent-yellow); border-style:dashed;"></div> MA 50</div>
+                    <div class="legend-item"><div class="legend-line" style="background:var(--rivool-black-40); border-style:dashed;"></div> MA 200</div>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h3>Comparativo: Moedas Emergentes vs Dólar (indexado = 100)</h3>
+                <div class="subtitle">Todas as moedas normalizadas para 100 no início do período. Valores acima de 100 = depreciação frente ao dólar.</div>
+                <div class="chart-container" style="height: 380px;">
+                    <canvas id="fxComparativeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="two-col">
+                <div class="chart-card">
+                    <h3>Volatilidade Rolling 30 dias (anualizada)</h3>
+                    <div class="subtitle">Maior volatilidade indica mais risco cambial.</div>
+                    <div class="chart-container tall"><canvas id="fxVolatilityChart"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <h3 id="fxAnnualChartTitle">Depreciação Anual vs Dólar</h3>
+                    <div class="subtitle">Variação % do câmbio por ano. Positivo = depreciação.</div>
+                    <div class="chart-container tall"><canvas id="fxAnnualChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h3 id="fxDrawdownTitle">Depreciação desde a Melhor Taxa</h3>
+                <div class="subtitle">Distância percentual da taxa atual em relação ao melhor câmbio (menor USD/moeda) no período.</div>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="fxDrawdownChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h3>Tabela de Performance Anual — Todas as Moedas</h3>
+                <div class="subtitle">Variação percentual do câmbio em cada ano. Positivo (vermelho) = moeda local perdeu valor. Negativo (verde) = moeda local ganhou valor.</div>
+                <div style="overflow-x: auto; margin-top: 12px;">
+                    <table class="cycles-table" id="fxAnnualTable">
+                        <thead><tr id="fxAnnualHeader"></tr></thead>
+                        <tbody id="fxAnnualBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="stat-highlight" style="margin-top:0">
+                    <p id="fxSummary">Carregando análise cambial...</p>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            Dados: CoinGecko / CoinCap / CryptoCompare &bull; Câmbio: <a href="https://www.frankfurter.app" target="_blank">Frankfurter API</a> (ECB) &bull; Tipografia: DM Sans &bull;
+            Atualizado: <span id="footerDate"></span><br>
+            <em>Dados históricos não garantem resultados futuros. Isto não constitui aconselhamento financeiro.</em>
+        </footer>
+    </div>
+
+    <script>
+    // ========================
+    // GLOBAL STATE
+    // ========================
+    let STATE = { coin: 'btc', period: 1825, data: {}, charts: {} };
+    let isLoading = false;
+    const COIN_IDS = { btc: 'bitcoin', eth: 'ethereum' };
+    const COIN_SYMBOLS = { btc: 'BTC', eth: 'ETH' };
+
+    // ========================
+    // CHART.JS GLOBAL DEFAULTS (Rivool theme)
+    // ========================
+    Chart.defaults.font.family = "'DM Sans', sans-serif";
+    Chart.defaults.color = '#9A959A';
+
+    // Register annotation plugin (UMD CDN auto-registers, but verify)
+    try {
+        const annotPlugin = window.ChartAnnotation || window['chartjsPluginAnnotation'];
+        if (annotPlugin) Chart.register(annotPlugin);
+    } catch(e) { console.warn('Annotation plugin not loaded:', e); }
+
+    // ========================
+    // MULTI-SOURCE DATA FETCHING
+    // ========================
+    const COINCAP_IDS = { bitcoin: 'bitcoin', ethereum: 'ethereum' };
+    const CC_SYMS = { bitcoin: 'BTC', ethereum: 'ETH' };
+
+    function fetchWithTimeout(url, opts = {}, ms = 8000) {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), ms);
+        return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(timer));
+    }
+
+    async function fetchCoinData(coinId, days) {
+        const daysNum = days === 'max' ? 3650 : parseInt(days);
+        const errors = [];
+
+        try { const d = await fetchFromCoinGecko(coinId, days); if (d && d.length > 10) return d; } catch(e) { errors.push('CoinGecko: ' + e.message); }
+        try { const d = await fetchFromCoinCap(coinId, daysNum); if (d && d.length > 10) return d; } catch(e) { errors.push('CoinCap: ' + e.message); }
+        try { const d = await fetchFromCryptoCompare(coinId, daysNum); if (d && d.length > 10) return d; } catch(e) { errors.push('CryptoCompare: ' + e.message); }
+
+        throw new Error('Todas as fontes falharam. ' + errors.join(' | '));
+    }
+
+    async function fetchFromCoinGecko(coinId, days) {
+        const url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days === 'max' ? 'max' : days}&interval=daily`;
+        const r = await fetchWithTimeout(url, { headers: { 'x-cg-demo-api-key': 'CG-demo' } });
+        if (!r.ok) throw new Error(r.status);
+        const j = await r.json();
+        if (!j.prices?.length) throw new Error('Empty');
+        return j.prices.map(([ts, p]) => ({ date: new Date(ts), price: p })).filter(d => !isNaN(d.price) && d.price > 0);
+    }
+
+    async function fetchFromCoinCap(coinId, daysNum) {
+        const now = Date.now(), start = now - daysNum * 86400000;
+        const r = await fetchWithTimeout(`https://api.coincap.io/v2/assets/${COINCAP_IDS[coinId]}/history?interval=d1&start=${start}&end=${now}`);
+        if (!r.ok) throw new Error(r.status);
+        const j = await r.json();
+        if (!j.data?.length) throw new Error('Empty');
+        return j.data.map(d => ({ date: new Date(d.time || d.date), price: parseFloat(d.priceUsd) })).filter(d => !isNaN(d.price));
+    }
+
+    async function fetchFromCryptoCompare(coinId, daysNum) {
+        const limit = Math.min(daysNum, 2000);
+        const r = await fetchWithTimeout(`https://min-api.cryptocompare.com/data/v2/histoday?fsym=${CC_SYMS[coinId]}&tsym=USD&limit=${limit}`);
+        if (!r.ok) throw new Error(r.status);
+        const j = await r.json();
+        if (!j.Data?.Data?.length) throw new Error('Empty');
+        return j.Data.Data.map(d => ({ date: new Date(d.time * 1000), price: d.close })).filter(d => d.price > 0);
+    }
+
+    // ========================
+    // STATISTICAL CALCULATIONS
+    // ========================
+    function calcMovingAvg(data, w) {
+        return data.map((_, i) => i < w - 1 ? null : data.slice(i - w + 1, i + 1).reduce((a, d) => a + d.price, 0) / w);
+    }
+
+    function calcRSI(data, period = 14) {
+        const rsi = new Array(data.length).fill(null);
+        if (data.length < period + 1) return rsi;
+        const gains = [], losses = [];
+        for (let i = 1; i < data.length; i++) {
+            const c = data[i].price - data[i-1].price;
+            gains.push(c > 0 ? c : 0);
+            losses.push(c < 0 ? -c : 0);
+        }
+        let ag = gains.slice(0, period).reduce((a,b) => a+b, 0) / period;
+        let al = losses.slice(0, period).reduce((a,b) => a+b, 0) / period;
+        rsi[period] = al === 0 ? 100 : 100 - 100 / (1 + ag / al);
+        for (let i = period; i < gains.length; i++) {
+            ag = (ag * (period - 1) + gains[i]) / period;
+            al = (al * (period - 1) + losses[i]) / period;
+            rsi[i + 1] = al === 0 ? 100 : 100 - 100 / (1 + ag / al);
+        }
+        return rsi;
+    }
+
+    function calcDrawdown(data) {
+        const dd = []; let peak = data[0].price;
+        for (const d of data) { if (d.price > peak) peak = d.price; dd.push(((d.price - peak) / peak) * 100); }
+        return dd;
+    }
+
+    function calcZScore(data, w = 200) {
+        const r = new Array(data.length).fill(null);
+        for (let i = w - 1; i < data.length; i++) {
+            const s = data.slice(i - w + 1, i + 1).map(d => d.price);
+            const m = s.reduce((a,b) => a+b, 0) / s.length;
+            const std = Math.sqrt(s.reduce((a,b) => a + (b - m) ** 2, 0) / s.length);
+            r[i] = std === 0 ? 0 : (data[i].price - m) / std;
+        }
+        return r;
+    }
+
+    function calcMonthlyReturns(data) {
+        const m = []; let lm = -1, lp = null;
+        for (const d of data) {
+            const mo = d.date.getMonth();
+            if (mo !== lm && lp !== null) m.push(((d.price - lp) / lp) * 100);
+            if (mo !== lm) { lm = mo; lp = d.price; }
+        }
+        return m;
+    }
+
+    function identifyCycles(data, drawdown, threshold = -20) {
+        const cycles = []; let inCycle = false, cs = 0, pp = 0, ti = 0, tp = Infinity;
+        for (let i = 0; i < data.length; i++) {
+            if (!inCycle && drawdown[i] <= threshold) {
+                inCycle = true;
+                let pi = i;
+                for (let j = i; j >= 0; j--) { if (data[j].price >= data[pi].price) pi = j; if (drawdown[j] >= -2) break; }
+                cs = pi; pp = data[pi].price; ti = i; tp = data[i].price;
+            } else if (inCycle) {
+                if (data[i].price < tp) { ti = i; tp = data[i].price; }
+                if (drawdown[i] >= -5 || i === data.length - 1) {
+                    const fall = ((tp - pp) / pp) * 100;
+                    if (fall <= -20) {
+                        cycles.push({
+                            peakDate: data[cs].date, troughDate: data[ti].date,
+                            recoveryDate: i < data.length - 1 ? data[i].date : null,
+                            peakPrice: pp, troughPrice: tp, fall,
+                            durationDays: Math.round((data[ti].date - data[cs].date) / 86400000),
+                            recoveryDays: i < data.length - 1 ? Math.round((data[i].date - data[ti].date) / 86400000) : null,
+                            returnFromBottom: ((data[data.length - 1].price - tp) / tp) * 100
+                        });
+                    }
+                    inCycle = false; tp = Infinity;
+                }
+            }
+        }
+        return cycles.sort((a, b) => a.fall - b.fall);
+    }
+
+    function identifyEntryPoints(data, rsi, zscore, drawdown) {
+        const entries = []; let cd = 0;
+        for (let i = 200; i < data.length; i++) {
+            if (cd > 0) { cd--; continue; }
+            let score = 0; const reasons = [];
+            if (rsi[i] !== null && rsi[i] < 30) { score += 2; reasons.push('RSI=' + rsi[i].toFixed(0)); }
+            else if (rsi[i] !== null && rsi[i] < 40) { score += 1; reasons.push('RSI=' + rsi[i].toFixed(0)); }
+            if (zscore[i] !== null && zscore[i] < -2) { score += 3; reasons.push('Z=' + zscore[i].toFixed(1)); }
+            else if (zscore[i] !== null && zscore[i] < -1.5) { score += 2; reasons.push('Z=' + zscore[i].toFixed(1)); }
+            else if (zscore[i] !== null && zscore[i] < -1) { score += 1; reasons.push('Z=' + zscore[i].toFixed(1)); }
+            if (drawdown[i] < -50) { score += 3; reasons.push('DD=' + drawdown[i].toFixed(0) + '%'); }
+            else if (drawdown[i] < -30) { score += 2; reasons.push('DD=' + drawdown[i].toFixed(0) + '%'); }
+            else if (drawdown[i] < -20) { score += 1; reasons.push('DD=' + drawdown[i].toFixed(0) + '%'); }
+            if (score >= 4) {
+                const fr = i + 180 < data.length ? ((data[i+180].price - data[i].price) / data[i].price) * 100 : null;
+                entries.push({ idx: i, date: data[i].date, price: data[i].price, score, reasons: reasons.join(', '), futureReturn: fr });
+                cd = 30;
+            }
+        }
+        return entries;
+    }
+
+    function calcQuartileReturns(data, zscore) {
+        const bins = [
+            { label: 'Z < -2 (Extremo)', min: -Infinity, max: -2, returns: [] },
+            { label: '-2 < Z < -1', min: -2, max: -1, returns: [] },
+            { label: '-1 < Z < 0', min: -1, max: 0, returns: [] },
+            { label: '0 < Z < 1', min: 0, max: 1, returns: [] },
+            { label: 'Z > 1 (Topo)', min: 1, max: Infinity, returns: [] }
+        ];
+        for (let i = 200; i < data.length - 180; i++) {
+            if (zscore[i] === null) continue;
+            const ret = ((data[i+180].price - data[i].price) / data[i].price) * 100;
+            for (const b of bins) { if (zscore[i] >= b.min && zscore[i] < b.max) { b.returns.push(ret); break; } }
+        }
+        return bins.map(b => ({
+            label: b.label,
+            avgReturn: b.returns.length ? b.returns.reduce((a,c) => a+c, 0) / b.returns.length : 0,
+            count: b.returns.length,
+            winRate: b.returns.length ? b.returns.filter(r => r > 0).length / b.returns.length * 100 : 0
+        }));
+    }
+
+    // ========================
+    // DEEP DROP ANALYSIS (≥50%)
+    // ========================
+    function analyzeDeepDrops(data, drawdown) {
+        // Identify distinct drops ≥50%
+        const drops = [];
+        let inDrop = false, peakIdx = 0, troughIdx = 0, troughDD = 0;
+
+        for (let i = 1; i < data.length; i++) {
+            if (!inDrop && drawdown[i] <= -50) {
+                inDrop = true;
+                // find peak
+                peakIdx = i;
+                for (let j = i; j >= 0; j--) {
+                    if (data[j].price >= data[peakIdx].price) peakIdx = j;
+                    if (drawdown[j] >= -5) break;
+                }
+                troughIdx = i;
+                troughDD = drawdown[i];
+            } else if (inDrop) {
+                if (drawdown[i] < troughDD) { troughIdx = i; troughDD = drawdown[i]; }
+                if (drawdown[i] >= -10 || i === data.length - 1) {
+                    const peakPrice = data[peakIdx].price;
+                    const troughPrice = data[troughIdx].price;
+                    const fall = ((troughPrice - peakPrice) / peakPrice) * 100;
+                    const daysToBottom = Math.round((data[troughIdx].date - data[peakIdx].date) / 86400000);
+
+                    // Find recovery (price >= peakPrice again)
+                    let recoveryIdx = null;
+                    for (let k = troughIdx + 1; k < data.length; k++) {
+                        if (data[k].price >= peakPrice) { recoveryIdx = k; break; }
+                    }
+
+                    const recoveryDays = recoveryIdx ? Math.round((data[recoveryIdx].date - data[troughIdx].date) / 86400000) : null;
+                    const recovered = recoveryIdx !== null;
+
+                    // Return 1 year after trough
+                    const oneYearIdx = Math.min(troughIdx + 365, data.length - 1);
+                    const return1y = troughIdx + 365 < data.length
+                        ? ((data[oneYearIdx].price - troughPrice) / troughPrice) * 100 : null;
+
+                    drops.push({
+                        peakDate: data[peakIdx].date,
+                        troughDate: data[troughIdx].date,
+                        recoveryDate: recoveryIdx ? data[recoveryIdx].date : null,
+                        peakPrice, troughPrice, fall, daysToBottom, recoveryDays, recovered, return1y
+                    });
+
+                    inDrop = false; troughDD = 0;
+                }
+            }
+        }
+
+        return drops;
+    }
+
+    function calcConditionalProb(data, drawdown) {
+        // For different drop thresholds, what % of the time is the asset up in 3m, 6m, 12m?
+        const thresholds = [-20, -30, -40, -50, -60, -70];
+        const results = thresholds.map(t => {
+            let up3m = 0, up6m = 0, up12m = 0, total3m = 0, total6m = 0, total12m = 0;
+            let lastTriggered = -91;
+            for (let i = 0; i < data.length; i++) {
+                if (drawdown[i] <= t && i - lastTriggered > 90) {
+                    lastTriggered = i;
+                    if (i + 90 < data.length) { total3m++; if (data[i+90].price > data[i].price) up3m++; }
+                    if (i + 180 < data.length) { total6m++; if (data[i+180].price > data[i].price) up6m++; }
+                    if (i + 365 < data.length) { total12m++; if (data[i+365].price > data[i].price) up12m++; }
+                }
+            }
+            return {
+                threshold: t,
+                prob3m: total3m ? (up3m / total3m * 100) : null,
+                prob6m: total6m ? (up6m / total6m * 100) : null,
+                prob12m: total12m ? (up12m / total12m * 100) : null,
+                samples: total12m
+            };
+        });
+        return results;
+    }
+
+    function calcReturnByDropBand(data, drawdown) {
+        const bands = [
+            { label: '-20% a -30%', min: -30, max: -20, returns: [] },
+            { label: '-30% a -40%', min: -40, max: -30, returns: [] },
+            { label: '-40% a -50%', min: -50, max: -40, returns: [] },
+            { label: '-50% a -60%', min: -60, max: -50, returns: [] },
+            { label: '-60% a -70%', min: -70, max: -60, returns: [] },
+            { label: '-70%+', min: -100, max: -70, returns: [] }
+        ];
+        let lastSample = -91;
+        for (let i = 0; i < data.length - 365; i++) {
+            if (i - lastSample < 30) continue;
+            for (const b of bands) {
+                if (drawdown[i] >= b.min && drawdown[i] < b.max) {
+                    b.returns.push(((data[i+365].price - data[i].price) / data[i].price) * 100);
+                    lastSample = i;
+                    break;
+                }
+            }
+        }
+        return bands.map(b => ({
+            label: b.label,
+            avgReturn: b.returns.length ? b.returns.reduce((a,c) => a+c, 0) / b.returns.length : 0,
+            count: b.returns.length,
+            medianReturn: b.returns.length ? b.returns.sort((a,c) => a-c)[Math.floor(b.returns.length/2)] : 0
+        }));
+    }
+
+    // ========================
+    // FORMATTING
+    // ========================
+    function fmt(n, d = 0) { return new Intl.NumberFormat('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }).format(n); }
+    function fmtDate(d) { return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }); }
+
+    // ========================
+    // CHART THEME COLORS
+    // ========================
+    const TH = {
+        blue: '#0541FE', blueBg: 'rgba(5,65,254,0.12)', blueLight: 'rgba(5,65,254,0.4)',
+        black: '#0A0A0A', black60: 'rgba(10,10,10,0.60)', black20: 'rgba(10,10,10,0.20)',
+        green: '#00C48C', greenBg: 'rgba(0,196,140,0.15)',
+        red: '#FF3B5C', redBg: 'rgba(255,59,92,0.15)',
+        yellow: '#FFB020', yellowBg: 'rgba(255,176,32,0.15)',
+        gray: '#E8E4E8', grayDark: '#9A959A',
+        gridColor: 'rgba(10,10,10,0.06)'
+    };
+
+    // ========================
+    // DESTROY & BUILD
+    // ========================
+    function destroyCharts() { Object.values(STATE.charts).forEach(c => c && c.destroy()); STATE.charts = {}; }
+
+    function buildCharts(data, coinKey) {
+        destroyCharts();
+        const symbol = COIN_SYMBOLS[coinKey];
+        const ma200 = calcMovingAvg(data, 200);
+        const rsi = calcRSI(data, 14);
+        const drawdown = calcDrawdown(data);
+        const zscore = calcZScore(data, 200);
+        const cycles = identifyCycles(data, drawdown);
+        const entries = identifyEntryPoints(data, rsi, zscore, drawdown);
+        const monthlyReturns = calcMonthlyReturns(data);
+        const quartiles = calcQuartileReturns(data, zscore);
+
+        const labels = data.map(d => d.date);
+        const prices = data.map(d => d.price);
+
+        updateKPIs(data, rsi, zscore, drawdown, entries, coinKey);
+        buildPriceChart(labels, prices, ma200, drawdown, entries, symbol);
+        buildDrawdownChart(labels, drawdown);
+        buildRSIChart(labels, rsi);
+        buildZScoreChart(labels, zscore);
+        buildCyclesTable(cycles, data, symbol);
+        buildEntryPointsChart(data, entries, symbol);
+        buildReturnDistChart(monthlyReturns);
+        buildQuartileChart(quartiles);
+
+        // Deep drop analysis
+        const deepDrops = analyzeDeepDrops(data, drawdown);
+        const condProb = calcConditionalProb(data, drawdown);
+        const returnByDrop = calcReturnByDropBand(data, drawdown);
+        buildDeepDropAnalysis(deepDrops, condProb, returnByDrop, data, drawdown, symbol);
+    }
+
+    function updateKPIs(data, rsi, zscore, drawdown, entries, coinKey) {
+        const cur = data[data.length - 1].price;
+        const prev = data[Math.max(0, data.length - 31)].price;
+        const chg = ((cur - prev) / prev) * 100;
+        const ath = Math.max(...data.map(d => d.price));
+        const athDist = ((cur - ath) / ath) * 100;
+        const maxDD = Math.min(...drawdown);
+        const maxDDIdx = drawdown.indexOf(maxDD);
+        const curRSI = rsi.filter(r => r !== null).pop();
+        const curZ = zscore.filter(z => z !== null).pop();
+
+        document.getElementById('kpiPrice').textContent = '$' + fmt(cur, cur < 10 ? 2 : 0);
+        document.getElementById('kpiPrice').style.color = 'var(--rivool-blue)';
+        const ce = document.getElementById('kpiPriceChange');
+        ce.textContent = (chg >= 0 ? '+' : '') + chg.toFixed(1) + '% (30d)';
+        ce.className = 'kpi-sub ' + (chg >= 0 ? 'positive' : 'negative');
+
+        document.getElementById('kpiATH').textContent = '$' + fmt(ath, 0);
+        const ae = document.getElementById('kpiATHDist');
+        ae.textContent = athDist.toFixed(1) + '% do ATH';
+        ae.className = 'kpi-sub ' + (athDist >= -10 ? 'positive' : 'negative');
+
+        document.getElementById('kpiMaxDD').textContent = maxDD.toFixed(1) + '%';
+        document.getElementById('kpiMaxDDDate').textContent = maxDDIdx >= 0 ? fmtDate(data[maxDDIdx].date) : '--';
+
+        document.getElementById('kpiRSI').textContent = curRSI ? curRSI.toFixed(1) : '--';
+        const rs = document.getElementById('kpiRSISignal');
+        if (curRSI < 30) { rs.textContent = 'Sobrevendido'; rs.className = 'kpi-sub positive'; }
+        else if (curRSI > 70) { rs.textContent = 'Sobrecomprado'; rs.className = 'kpi-sub negative'; }
+        else { rs.textContent = 'Neutro'; rs.className = 'kpi-sub'; rs.style.color = 'var(--rivool-gray-dark)'; }
+
+        document.getElementById('kpiDeviation').textContent = curZ ? curZ.toFixed(2) + 'σ' : '--';
+        const ds = document.getElementById('kpiDeviationSignal');
+        if (curZ < -1.5) { ds.textContent = 'Abaixo da média'; ds.className = 'kpi-sub positive'; }
+        else if (curZ > 1.5) { ds.textContent = 'Acima da média'; ds.className = 'kpi-sub negative'; }
+        else { ds.textContent = 'Próximo da média'; ds.className = 'kpi-sub'; ds.style.color = 'var(--rivool-gray-dark)'; }
+
+        let es = 0;
+        if (curRSI && curRSI < 30) es += 2; else if (curRSI && curRSI < 40) es += 1;
+        if (curZ && curZ < -2) es += 3; else if (curZ && curZ < -1.5) es += 2; else if (curZ && curZ < -1) es += 1;
+        const ld = drawdown[drawdown.length - 1];
+        if (ld < -50) es += 3; else if (ld < -30) es += 2; else if (ld < -20) es += 1;
+
+        const ee = document.getElementById('kpiEntrySignal');
+        if (es >= 5) { ee.textContent = 'FORTE'; ee.style.color = 'var(--accent-green)'; }
+        else if (es >= 3) { ee.textContent = 'MODERADO'; ee.style.color = 'var(--accent-yellow)'; }
+        else { ee.textContent = 'FRACO'; ee.style.color = 'var(--rivool-gray-dark)'; }
+
+        document.getElementById('kpiEntryDetail').textContent =
+            'Score: ' + es + '/8 | RSI: ' + (curRSI?.toFixed(0)||'--') + ' | Z: ' + (curZ?.toFixed(1)||'--') + ' | DD: ' + (ld?.toFixed(0)||'--') + '%';
+    }
+
+    // ========================
+    // CHART BUILDERS (Rivool themed)
+    // ========================
+    function buildPriceChart(labels, prices, ma200, drawdown, entries, symbol) {
+        const ctx = document.getElementById('priceDrawdownChart').getContext('2d');
+        STATE.charts.price = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    { label: symbol, data: prices, borderColor: TH.blue, borderWidth: 2, pointRadius: 0, tension: 0.1, yAxisID: 'y', order: 1 },
+                    { label: 'MA200', data: ma200, borderColor: TH.black20, borderWidth: 1.5, borderDash: [6,4], pointRadius: 0, tension: 0.1, yAxisID: 'y', order: 2 },
+                    { label: 'DD', data: drawdown, borderColor: 'rgba(255,59,92,0.5)', backgroundColor: 'rgba(255,59,92,0.08)', borderWidth: 0, pointRadius: 0, fill: true, yAxisID: 'y2', order: 3 },
+                    ...entries.filter(e => e.score >= 5).map(e => ({
+                        label: '', data: labels.map((_, i) => i === e.idx ? prices[i] : null),
+                        pointRadius: 8, pointBackgroundColor: TH.green, pointBorderColor: '#fff', pointBorderWidth: 2, showLine: false, yAxisID: 'y', order: 0
+                    }))
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { display: false },
+                    tooltip: { callbacks: {
+                        title: it => { try { return fmtDate(new Date(it[0].raw?.x ?? it[0].parsed?.x ?? it[0].label)); } catch(e) { return ''; } },
+                        label: it => { const y = it.parsed?.y; if (y == null) return ''; return it.datasetIndex === 0 ? symbol + ': $' + fmt(y, 2) : it.datasetIndex === 1 ? 'MA200: $' + fmt(y, 2) : it.datasetIndex === 2 ? 'DD: ' + y.toFixed(1) + '%' : 'Entrada: $' + fmt(y, 2); }
+                    }}
+                },
+                scales: {
+                    x: { type: 'time', time: { unit: 'month', tooltipFormat: 'dd LLL yyyy', displayFormats: { day: 'dd LLL', month: 'LLL yy', quarter: "'Q'q yyyy", year: 'yyyy' } }, ticks: { maxTicksLimit: 12, font: { size: 11 } }, grid: { color: TH.gridColor } },
+                    y: { position: 'left', type: 'logarithmic', ticks: { font: { size: 11 }, callback: v => '$' + fmt(v, 0) }, grid: { color: TH.gridColor } },
+                    y2: { position: 'right', min: -90, max: 0, ticks: { color: 'rgba(255,59,92,0.4)', font: { size: 10 }, callback: v => v + '%' }, grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function buildDrawdownChart(labels, drawdown) {
+        const ctx = document.getElementById('drawdownChart').getContext('2d');
+        STATE.charts.drawdown = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets: [{ data: drawdown, borderColor: TH.red, backgroundColor: TH.redBg, borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.1 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false },
+                    tooltip: { callbacks: { title: it => { try { return fmtDate(new Date(it[0].raw?.x ?? it[0].parsed?.x ?? it[0].label)); } catch(e) { return ''; } }, label: it => 'DD: ' + (it.parsed.y?.toFixed(1) ?? '--') + '%' } },
+                    annotation: { annotations: {
+                        l30: { type: 'line', yMin: -30, yMax: -30, borderColor: TH.yellowBg, borderDash: [5,5], borderWidth: 1, label: { content: '-30%', display: true, position: 'start', backgroundColor: 'transparent', color: TH.yellow, font: { size: 10 } } },
+                        l50: { type: 'line', yMin: -50, yMax: -50, borderColor: TH.redBg, borderDash: [5,5], borderWidth: 1, label: { content: '-50%', display: true, position: 'start', backgroundColor: 'transparent', color: TH.red, font: { size: 10 } } },
+                        box: { type: 'box', yMin: -100, yMax: -50, backgroundColor: 'rgba(0,196,140,0.04)', borderWidth: 0, label: { content: 'Zona de acumulação', display: true, position: { x: 'center', y: 'start' }, backgroundColor: 'transparent', color: 'rgba(0,196,140,0.5)', font: { size: 11 } } }
+                    }}
+                },
+                scales: {
+                    x: { type: 'time', time: { unit: 'month', tooltipFormat: 'dd LLL yyyy', displayFormats: { day: 'dd LLL', month: 'LLL yy', year: 'yyyy' } }, ticks: { maxTicksLimit: 10, font: { size: 11 } }, grid: { color: TH.gridColor } },
+                    y: { max: 0, ticks: { font: { size: 11 }, callback: v => v + '%' }, grid: { color: TH.gridColor } }
+                }
+            }
+        });
+    }
+
+    function buildRSIChart(labels, rsi) {
+        const ctx = document.getElementById('rsiChart').getContext('2d');
+        STATE.charts.rsi = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets: [{ data: rsi, borderColor: TH.blue, borderWidth: 1.5, pointRadius: 0, tension: 0.1, fill: false }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false },
+                    tooltip: { callbacks: { title: it => { try { return fmtDate(new Date(it[0].raw?.x ?? it[0].parsed?.x ?? it[0].label)); } catch(e) { return ''; } }, label: it => 'RSI: ' + it.parsed.y?.toFixed(1) } },
+                    annotce().sort((a,b) => a - b);
+        const idx = (p / 100) * (s.length - 1);
+        const lo = Math.floor(idx), hi = Math.ceil(idx);
+        return lo === hi ? s[lo] : s[lo] + (s[hi] - s[lo]) * (idx - lo);
+    }
+
+    function runSimulation() {
+        const coin = document.querySelector('#simAssetSelector .active')?.dataset.sim || 'btc';
+        const priceInput = parseFloat(document.getElementById('simPrice').value);
+        const dateInput = document.getElementById('simDate').value;
+        const errEl = document.getElementById('simError');
+        errEl.style.display = 'none';
+
+        if (!priceInput || priceInput <= 0) { errEl.textContent = 'Insira um preço de compra válido.'; errEl.style.display = 'block'; return; }
+        if (!dateInput) { errEl.textContent = 'Selecione a data da compra.'; errEl.style.display = 'block'; return; }
+
+        const data = STATE.data[coin];
+        if (!data || data.length < 100) {
+            errEl.textContent = 'Dados de ' + COIN_SYMBOLS[coin] + ' ainda não carregados. Aguarde ou recarregue.';
+            errEl.style.display = 'block'; return;
+        }
+
+        const purchaseDate = new Date(dateInput + 'T12:00:00');
+        const firstDate = data[0].date, lastDate = data[data.length-1].date;
+        if (purchaseDate < firstDate || purchaseDate > lastDate) {
+            errEl.textContent = 'Data fora do período carregado (' + fmtDate(firstDate) + ' a ' + fmtDate(lastDate) + '). Selecione "Max" para mais dados.';
+            errEl.style.display = 'block'; return;
+        }
+
+        // Find closest data point
+        let pIdx = 0, minDiff = Infinity;
+        data.forEach((d, i) => { const diff = Math.abs(d.date - purchaseDate); if (diff < minDiff) { minDiff = diff; pIdx = i; } });
+
+        const actualPrice = data[pIdx].price;
+
+        // Drawdown from ATH at purchase date
+        let athAtPurchase = 0;
+        for (let i = 0; i <= pIdx; i++) { if (data[i].price > athAtPurchase) athAtPurchase = data[i].price; }
+        const ddAtPurchase = ((actualPrice - athAtPurchase) / athAtPurchase) * 100;
+
+        // Find analogues: historical moments with similar drawdown (±7%)
+        const dd = calcDrawdown(data);
+        const tol = 7;
+        const analogues = [];
+        let lastAdd = -60;
+        for (let i = 50; i < data.length; i++) {
+            if (Math.abs(i - pIdx) < 30) continue;
+            if (i - lastAdd < 30) continue;
+            if (Math.abs(dd[i] - ddAtPurchase) <= tol) { analogues.push(i); lastAdd = i; }
+        }
+
+        if (analogues.length < 3) {
+            errEl.textContent = 'Apenas ' + analogues.length + ' situação(ões) similar(es) encontrada(s). Resultado pouco confiável. Tente o período "Max".';
+            errEl.style.display = 'block';
+            if (analogues.length === 0) return;
+        }
+
+        // Forward paths (up to 365 days)
+        const maxDays = 365;
+        const paths = analogues.map(idx => {
+            const p = [];
+            for (let d = 0; d <= maxDays && idx + d < data.length; d++) {
+                p.push(((data[idx + d].price - data[idx].price) / data[idx].price) * 100);
+            }
+            return p;
+        });
+
+        // Actual path from purchase (based on user price)
+        const userPath = [];
+        for (let d = 0; d <= maxDays && pIdx + d < data.length; d++) {
+            userPath.push(((data[pIdx + d].price - priceInput) / priceInput) * 100);
+        }
+
+        // Percentiles at each day
+        const dayLabels = [], pctls = { p10:[], p25:[], p50:[], p75:[], p90:[] };
+        for (let d = 0; d <= maxDays; d++) {
+            const vals = paths.map(p => p[d]).filter(v => v !== undefined);
+            if (vals.length < 3) break;
+            dayLabels.push(d);
+            vals.sort((a,b) => a - b);
+            pctls.p10.push(simPctl(vals, 10));
+            pctls.p25.push(simPctl(vals, 25));
+            pctls.p50.push(simPctl(vals, 50));
+            pctls.p75.push(simPctl(vals, 75));
+            pctls.p90.push(simPctl(vals, 90));
+        }
+
+        // Current P&L
+        const currentPrice = data[data.length-1].price;
+        const pnl = ((currentPrice - priceInput) / priceInput) * 100;
+        const daysSince = Math.round((lastDate - data[pIdx].date) / 86400000);
+
+        // Probability at horizons
+        const horizons = [30, 90, 180, 365];
+        const probData = horizons.map(h => {
+            const rets = paths.map(p => p[h]).filter(v => v !== undefined);
+            if (rets.length === 0) return { days: h, prob: null, avg: null, med: null, best: null, worst: null, n: 0 };
+            rets.sort((a,b) => a - b);
+            return {
+                days: h,
+                prob: rets.filter(r => r > 0).length / rets.length * 100,
+                avg: rets.reduce((a,b) => a+b, 0) / rets.length,
+                med: simPctl(rets, 50),
+                best: rets[rets.length - 1],
+                worst: rets[0],
+                n: rets.length
+            };
+        });
+
+        // Max further drawdown from analogues
+        const maxFDD = paths.map(p => Math.min(...p));
+        const probFDD20 = maxFDD.length ? maxFDD.filter(d => d < -20).length / maxFDD.length * 100 : 0;
+        // Prob 2x
+        const prob2x = paths.filter(p => p.some(r => r >= 100)).length / paths.length * 100;
+
+        // ---- UPDATE UI ----
+        const sym = COIN_SYMBOLS[coin];
+
+        // KPIs
+        document.getElementById('simPnl').textContent = (pnl >= 0 ? '+' : '') + pnl.toFixed(1) + '%';
+        document.getElementById('simPnl').style.color = pnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+        document.getElementById('simPnlDetail').textContent = '$' + fmt(priceInput,0) + ' → $' + fmt(currentPrice,0) + ' (' + daysSince + 'd)';
+        document.getElementById('simPnlDetail').className = 'kpi-sub ' + (pnl >= 0 ? 'positive' : 'negative');
+
+        document.getElementById('simDD').textContent = ddAtPurchase.toFixed(1) + '%';
+        document.getElementById('simDDDetail').textContent = 'ATH era $' + fmt(athAtPurchase,0) + ' | Preço real: $' + fmt(actualPrice,0);
+
+        document.getElementById('simAnalogues').textContent = analogues.length;
+        document.getElementById('simAnaloguesDetail').textContent = 'dd entre ' + (ddAtPurchase - tol).toFixed(0) + '% e ' + (ddAtPurchase + tol).toFixed(0) + '%';
+
+        const p1y = probData.find(p => p.days === 365);
+        document.getElementById('simProb1y').textContent = p1y && p1y.prob !== null ? p1y.prob.toFixed(0) + '%' : 'N/A';
+        document.getElementById('simProb1y').style.color = p1y && p1y.prob > 60 ? 'var(--accent-green)' : p1y && p1y.prob > 40 ? 'var(--accent-yellow)' : 'var(--accent-red)';
+        document.getElementById('simProb1yDetail').textContent = p1y ? 'n=' + p1y.n + ' análogos' : 'dados insuficientes';
+
+        document.getElementById('simProbDD').textContent = probFDD20.toFixed(0) + '%';
+        document.getElementById('simProbDD').style.color = probFDD20 > 50 ? 'var(--accent-red)' : probFDD20 > 25 ? 'var(--accent-yellow)' : 'var(--accent-green)';
+
+        document.getElementById('simProb2x').textContent = prob2x.toFixed(0) + '%';
+        document.getElementById('simProb2x').style.color = prob2x > 40 ? 'var(--accent-green)' : prob2x > 15 ? 'var(--accent-yellow)' : 'var(--rivool-gray-dark)';
+
+        // ---- MAX LOSS / MAX GAIN / SAFEST ENTRY ----
+        // Max Loss: P10 worst case from all paths (1 year horizon), in dollar terms
+        const worstPctAll = Math.min(...maxFDD);
+        const maxLoss$ = priceInput * Math.abs(worstPctAll) / 100;
+        const worstPrice$ = priceInput * (1 + worstPctAll / 100);
+        document.getElementById('simMaxLossValue').textContent = '-$' + fmt(maxLoss$, 0);
+        document.getElementById('simMaxLossDetail').textContent =
+            'Pior cenário histórico: ' + worstPctAll.toFixed(0) + '% | Preço mínimo: $' + fmt(Math.max(0, worstPrice$), 0);
+        const lossBarPct = Math.min(100, Math.abs(worstPctAll));
+        document.getElementById('simMaxLossBarFill').style.width = lossBarPct + '%';
+
+        // Max Gain: best case from all paths (use longest available horizon)
+        const bestPctAll = Math.max(...paths.map(p => Math.max(...p)));
+        const maxGain$ = priceInput * bestPctAll / 100;
+        const bestPrice$ = priceInput * (1 + bestPctAll / 100);
+        document.getElementById('simMaxGainValue').textContent = '+$' + fmt(maxGain$, 0);
+        document.getElementById('simMaxGainDetail').textContent =
+            'Melhor cenário histórico: +' + bestPctAll.toFixed(0) + '% | Preço máximo: $' + fmt(bestPrice$, 0);
+        const gainBarPct = Math.min(100, bestPctAll / (bestPctAll > 200 ? bestPctAll / 100 : 2));
+        document.getElementById('simMaxGainBarFill').style.width = gainBarPct + '%';
+
+        // Safest Entry Price: find the drawdown level with the best risk/reward
+        // We scan historical drawdown levels and for each, compute the 1y median return and probability of being positive
+        // The safest entry is the one with the best combination of high prob(+) and high median return
+        const ddLevels = [-20, -30, -40, -50, -60, -70, -80];
+        let bestScore = -Infinity, safestDD = ddAtPurchase, safestProb = 0, safestMedRet = 0, safestN = 0;
+        ddLevels.forEach(ddLevel => {
+            const idxs = [];
+            let lastA = -60;
+            for (let i = 50; i < data.length - 365; i++) {
+                if (i - lastA < 30) continue;
+                if (Math.abs(dd[i] - ddLevel) <= 5) { idxs.push(i); lastA = i; }
+            }
+            if (idxs.length < 3) return;
+            const rets1y = idxs.map(idx => ((data[Math.min(idx + 365, data.length-1)].price - data[idx].price) / data[idx].price) * 100);
+            const probUp = rets1y.filter(r => r > 0).length / rets1y.length * 100;
+            const medRet = simPctl(rets1y, 50);
+            const worstR = Math.min(...rets1y);
+            // Score: weigh probability, median return, and penalize worst case
+            const score = (probUp * 0.4) + (medRet * 0.4) + (worstR * 0.2);
+            if (score > bestScore) {
+                bestScore = score; safestDD = ddLevel; safestProb = probUp; safestMedRet = medRet; safestN = idxs.length;
+            }
+        });
+
+        const safestPrice = athAtPurchase * (1 + safestDD / 100);
+        document.getElementById('simSafeEntryValue').textContent = '$' + fmt(safestPrice, 0);
+        document.getElementById('simSafeEntryDetail').textContent =
+            'Drawdown ideal: ' + safestDD + '% do ATH | Prob. positivo 1a: ' + safestProb.toFixed(0) + '% (n=' + safestN + ')';
+        const noteEl = document.getElementById('simSafeEntryNote');
+        const diff = safestPrice - priceInput;
+        if (Math.abs(diff) > priceInput * 0.03) {
+            noteEl.style.display = 'block';
+            if (diff < 0) {
+                noteEl.textContent = 'Sua entrada ($' + fmt(priceInput,0) + ') está ' + Math.abs(((priceInput - safestPrice) / safestPrice) * 100).toFixed(0) + '% acima do ideal. Retorno mediano histórico de ' + (safestMedRet >= 0 ? '+' : '') + safestMedRet.toFixed(0) + '% em 1 ano no ponto ideal.';
+            } else {
+                noteEl.textContent = 'Sua entrada ($' + fmt(priceInput,0) + ') está ' + (((safestPrice - priceInput) / priceInput) * 100).toFixed(0) + '% abaixo do ideal — excelente posição! Retorno mediano histórico: ' + (safestMedRet >= 0 ? '+' : '') + safestMedRet.toFixed(0) + '% em 1 ano.';
+                noteEl.style.color = 'var(--accent-green)';
+                noteEl.style.background = 'var(--accent-green-bg)';
+            }
+        } else {
+            noteEl.style.display = 'block';
+            noteEl.textContent = 'Sua entrada está muito próxima do ponto ideal! Retorno mediano histórico: ' + (safestMedRet >= 0 ? '+' : '') + safestMedRet.toFixed(0) + '% em 1 ano.';
+            noteEl.style.color = 'var(--accent-green)';
+            noteEl.style.background = 'var(--accent-green-bg)';
+        }
+
+        // Fan Chart
+        document.getElementById('simFanTitle').textContent = 'Cone de Probabilidade — ' + sym + ' (DD: ' + ddAtPurchase.toFixed(0) + '% do ATH)';
+        if (simChart) simChart.destroy();
+        const ctx = document.getElementById('simFanChart').getContext('2d');
+        simChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dayLabels,
+                datasets: [
+                    { label: 'P90', data: pctls.p90, borderWidth: 0, pointRadius: 0, fill: false, borderColor: 'transparent', order: 6 },
+                    { label: 'P10', data: pctls.p10, borderWidth: 0, pointRadius: 0, fill: { target: 0, above: 'rgba(5,65,254,0.07)', below: 'rgba(5,65,254,0.07)' }, borderColor: 'transparent', order: 5 },
+                    { label: 'P75', data: pctls.p75, borderWidth: 0, pointRadius: 0, fill: false, borderColor: 'transparent', order: 4 },
+                    { label: 'P25', data: pctls.p25, borderWidth: 0, pointRadius: 0, fill: { target: 2, above: 'rgba(5,65,254,0.14)', below: 'rgba(5,65,254,0.14)' }, borderColor: 'transparent', order: 3 },
+                    { label: 'Mediana', data: pctls.p50, borderColor: TH.blue, borderWidth: 2.5, pointRadius: 0, tension: 0.2, fill: false, order: 2 },
+                    { label: 'Seu Caminho', data: userPath.slice(0, dayLabels.length), borderColor: TH.green, borderWidth: 2.5, pointRadius: 0, tension: 0.1, fill: false, borderDash: [], order: 1 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        filter: it => [1,3,4,5].includes(it.datasetIndex),
+                        callbacks: {
+                            title: it => 'Dia ' + it[0].label,
+                            label: it => {
+                                const names = ['','P10','','P25','Mediana','Seu Caminho'];
+                                return names[it.datasetIndex] + ': ' + (it.parsed.y >= 0 ? '+' : '') + it.parsed.y.toFixed(1) + '%';
+                            }
+                        }
+                    },
+                    annotation: { annotations: {
+                        zero: { type: 'line', yMin: 0, yMax: 0, borderColor: TH.black20, borderDash: [4,4], borderWidth: 1, label: { content: 'Break-even', display: true, position: 'end', backgroundColor: 'transparent', color: TH.grayDark, font: { size: 10 } } }
+                    }}
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Dias após entrada', font: { size: 12 } }, ticks: { maxTicksLimit: 12 }, grid: { color: TH.gridColor } },
+                    y: { ticks: { callback: v => (v >= 0 ? '+' : '') + v + '%' }, grid: { color: TH.gridColor } }
+                }
+            }
+        });
+
+        // Probability Table
+        const tbody = document.getElementById('simProbBody'); tbody.innerHTML = '';
+        const hNames = { 30: '30 dias', 90: '90 dias', 180: '6 meses', 365: '1 ano' };
+        probData.forEach(p => {
+            if (p.n === 0) return;
+            const tr = document.createElement('tr');
+            const probColor = p.prob > 70 ? 'var(--accent-green)' : p.prob > 50 ? 'var(--accent-yellow)' : 'var(--accent-red)';
+            tr.innerHTML =
+                '<td><strong>' + hNames[p.days] + '</strong></td>' +
+                '<td><span class="badge ' + (p.prob > 60 ? 'badge-green' : p.prob > 40 ? 'badge-yellow' : 'badge-red') + '">' + p.prob.toFixed(0) + '%</span></td>' +
+                '<td style="color:' + (p.avg > 0 ? 'var(--accent-green)' : 'var(--accent-red)') + ';font-weight:600">' + (p.avg >= 0 ? '+' : '') + p.avg.toFixed(1) + '%</td>' +
+                '<td style="font-weight:600">' + (p.med >= 0 ? '+' : '') + p.med.toFixed(1) + '%</td>' +
+                '<td style="color:var(--accent-green);font-weight:600">+' + p.best.toFixed(0) + '%</td>' +
+                '<td style="color:var(--accent-red);font-weight:600">' + p.worst.toFixed(0) + '%</td>' +
+                '<td style="color:var(--rivool-gray-dark)">' + p.n + '</td>';
+            tbody.appendChild(tr);
+        });
+
+        // Summary
+        const p90d = probData.find(p => p.days === 90);
+        const avgMaxDD = maxFDD.length ? maxFDD.reduce((a,b) => a+b, 0) / maxFDD.length : 0;
+        document.getElementById('simSummary').innerHTML =
+            '<strong>Resultado da Simulação:</strong> Você comprou ' + sym + ' a <strong>$' + fmt(priceInput,0) + '</strong> em ' + fmtDate(data[pIdx].date) +
+            ', quando o ativo estava <strong>' + ddAtPurchase.toFixed(0) + '% abaixo do ATH</strong> ($' + fmt(athAtPurchase,0) + '). ' +
+            'Foram encontradas <strong>' + analogues.length + ' situações históricas</strong> com drawdown similar (entre ' + (ddAtPurchase-tol).toFixed(0) + '% e ' + (ddAtPurchase+tol).toFixed(0) + '%). ' +
+            (p1y && p1y.prob !== null ? 'Nesses cenários, em <strong>' + p1y.prob.toFixed(0) + '%</strong> dos casos o ativo estava positivo após 1 ano, com retorno mediano de <strong>' + (p1y.med >= 0 ? '+' : '') + p1y.med.toFixed(0) + '%</strong>. ' : '') +
+            (p90d && p90d.prob !== null ? 'Em 90 dias, a probabilidade de estar positivo foi de <strong>' + p90d.prob.toFixed(0) + '%</strong>. ' : '') +
+            '<br><br><strong>Risco × Retorno:</strong> No pior cenário histórico, a perda máxima a partir do seu preço de compra seria de <strong style="color:var(--accent-red)">-$' + fmt(maxLoss$,0) + '</strong> (' + worstPctAll.toFixed(0) + '%). ' +
+            'No melhor cenário, o ganho máximo seria de <strong style="color:var(--accent-green)">+$' + fmt(maxGain$,0) + '</strong> (+' + bestPctAll.toFixed(0) + '%). ' +
+            'A relação risco/retorno é de <strong>1:' + (bestPctAll / Math.abs(worstPctAll)).toFixed(1) + '</strong>. ' +
+            '<br><br><strong>Entrada Ideal:</strong> Com base nas probabilidades históricas, a entrada mais segura para ' + sym + ' seria a <strong style="color:var(--rivool-blue)">$' + fmt(safestPrice,0) + '</strong> (drawdown de ' + safestDD + '% do ATH), ' +
+            'com probabilidade de <strong>' + safestProb.toFixed(0) + '%</strong> de estar positivo em 1 ano e retorno mediano de <strong>' + (safestMedRet >= 0 ? '+' : '') + safestMedRet.toFixed(0) + '%</strong>. ' +
+            '<br><em>Análise baseada em ' + analogues.length + ' precedentes históricos. Resultados passados não garantem retornos futuros.</em>';
+
+        document.getElementById('simResults').style.display = 'block';
+        document.getElementById('simResults').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ========================
+    // FOREX ANALYSIS
+    // ========================
+    const FX_CURRENCIES = ['BRL', 'MXN', 'ZAR', 'TRY', 'INR'];
+    const FX_NAMES = { BRL: 'Real Brasileiro', MXN: 'Peso Mexicano', ZAR: 'Rand Sul-Africano', TRY: 'Lira Turca', INR: 'Rupia Indiana' };
+    const FX_COLORS = { BRL: '#0541FE', MXN: '#00C48C', ZAR: '#FF3B5C', TRY: '#FFB020', INR: '#8B5CF6' };
+    let FX_STATE = { currency: 'BRL', period: 1825, data: null, charts: {} };
+    let isFxLoading = false;
+
+    async function fetchForexData(days) {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(start.getDate() - days);
+        const f = d => d.toISOString().split('T')[0];
+        const symbols = FX_CURRENCIES.join(',');
+        const url = `https://api.frankfurter.app/${f(start)}..${f(end)}?from=USD&to=${symbols}`;
+        const r = await fetchWithTimeout(url, {}, 15000);
+        if (!r.ok) throw new Error('Frankfurter API: ' + r.status);
+        const j = await r.json();
+        if (!j.rates || Object.keys(j.rates).length === 0) throw new Error('Sem dados cambiais');
+        const dates = Object.keys(j.rates).sort();
+        const result = {};
+        FX_CURRENCIES.forEach(c => {
+            result[c] = dates.filter(d => j.rates[d][c]).map(d => ({
+                date: new Date(d + 'T12:00:00Z'),
+                rate: j.rates[d][c]
+            }));
+        });
+        return result;
+    }
+
+    function calcFxMA(data, w) {
+        return data.map((_, i) => i < w - 1 ? null : data.slice(i - w + 1, i + 1).reduce((a, d) => a + d.rate, 0) / w);
+    }
+
+    function calcFxVolatility(data, w = 30) {
+        const vol = new Array(data.length).fill(null);
+        for (let i = w; i < data.length; i++) {
+            const rets = [];
+            for (let j = i - w + 1; j <= i; j++) rets.push(Math.log(data[j].rate / data[j-1].rate));
+            const mean = rets.reduce((a,b) => a+b, 0) / rets.length;
+            const variance = rets.reduce((a,b) => a + (b - mean) ** 2, 0) / rets.length;
+            vol[i] = Math.sqrt(variance) * Math.sqrt(252) * 100;
+        }
+        return vol;
+    }
+
+    function calcFxDrawdown(data) {
+        const dd = []; let best = data[0].rate;
+        for (const d of data) { if (d.rate < best) best = d.rate; dd.push(((d.rate - best) / best) * 100); }
+        return dd;
+    }
+
+    function calcFxAnnualReturns(data) {
+        const years = {};
+        data.forEach(d => { const y = d.date.getFullYear(); if (!years[y]) years[y] = { first: d.rate, last: d.rate }; years[y].last = d.rate; });
+        const result = {}, sy = Object.keys(years).sort();
+        sy.forEach((y, i) => { result[y] = i === 0 ? 0 : ((years[y].last - years[sy[i-1]].last) / years[sy[i-1]].last) * 100; });
+        return result;
+    }
+
+    function destroyFxCharts() { Object.values(FX_STATE.charts).forEach(c => c && c.destroy()); FX_STATE.charts = {}; }
+
+    function buildFxCharts(allData, selectedCurrency) {
+        destroyFxCharts();
+        const data = allData[selectedCurrency];
+        if (!data || data.length === 0) return;
+        const labels = data.map(d => d.date);
+        const rates = data.map(d => d.rate);
+        const ma50 = calcFxMA(data, 50);
+        const ma200 = calcFxMA(data, 200);
+        const vol = calcFxVolatility(data, 30);
+        const dd = calcFxDrawdown(data);
+        updateFxKPIs(data, allData, selectedCurrency, vol);
+        buildFxMainChart(labels, rates, ma50, ma200, selectedCurrency);
+        buildFxComparativeChart(allData);
+        buildFxVolatilityChart(allData);
+        buildFxAnnualBarChart(allData, selectedCurrency);
+        buildFxDrawdownChart(labels, dd, selectedCurrency);
+        buildFxAnnualTable(allData);
+        buildFxSummary(allData, selectedCurrency, data);
+    }
+
+    function updateFxKPIs(data, allData, currency, vol) {
+        const cur = data[data.length - 1].rate;
+        const prev30 = data[Math.max(0, data.length - 22)].rate;
+        const chg30 = ((cur - prev30) / prev30) * 100;
+        document.getElementById('fxKpiRate').textContent = cur.toFixed(4);
+        document.getElementById('fxKpiRate').style.color = 'var(--rivool-blue)';
+        const re = document.getElementById('fxKpiRateChange');
+        re.textContent = 'USD/' + currency + ' | ' + (chg30 >= 0 ? '+' : '') + chg30.toFixed(1) + '% (30d)';
+        re.className = 'kpi-sub ' + (chg30 <= 0 ? 'positive' : 'negative');
+
+        const year = new Date().getFullYear();
+        const ytdStart = data.find(d => d.date.getFullYear() === year);
+        if (ytdStart) {
+            const ytdChg = ((cur - ytdStart.rate) / ytdStart.rate) * 100;
+            document.getElementById('fxKpiYTD').textContent = (ytdChg >= 0 ? '+' : '') + ytdChg.toFixed(1) + '%';
+            document.getElementById('fxKpiYTD').style.color = ytdChg <= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+        }
+
+        const d12m = data[Math.max(0, data.length - 252)];
+        if (d12m) {
+            const chg12m = ((cur - d12m.rate) / d12m.rate) * 100;
+            document.getElementById('fxKpi12m').textContent = (chg12m >= 0 ? '+' : '') + chg12m.toFixed(1) + '%';
+            document.getElementById('fxKpi12m').style.color = chg12m <= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+            document.getElementById('fxKpi12mLabel').textContent = chg12m > 0 ? 'depreciação' : 'valorização';
+        }
+
+        let worst = data[0], best = data[0];
+        data.forEach(d => { if (d.rate > worst.rate) worst = d; if (d.rate < best.rate) best = d; });
+        document.getElementById('fxKpiWorst').textContent = worst.rate.toFixed(4);
+        document.getElementById('fxKpiWorstDate').textContent = fmtDate(worst.date);
+        document.getElementById('fxKpiBest').textContent = best.rate.toFixed(4);
+        document.getElementById('fxKpiBestDate').textContent = fmtDate(best.date);
+
+        const lastVol = vol.filter(v => v !== null).pop();
+        document.getElementById('fxKpiVol').textContent = lastVol ? lastVol.toFixed(1) + '%' : '--';
+    }
+
+    function buildFxMainChart(labels, rates, ma50, ma200, currency) {
+        document.getElementById('fxMainChartTitle').textContent = 'USD/' + currency + ' — Histórico & Médias Móveis';
+        const ctx = document.getElementById('fxMainChart').getContext('2d');
+        FX_STATE.charts.main = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets: [
+                { label: 'USD/' + currency, data: rates, borderColor: TH.blue, borderWidth: 2, pointRadius: 0, tension: 0.1, fill: false },
+                { label: 'MA50', data: ma50, borderColor: TH.yellow, borderWidth: 1.5, borderDash: [6,4], pointRadius: 0, tension: 0.1, fill: false },
+                { label: 'MA200', data: ma200, borderColor: TH.black20, borderWidth: 1.5, borderDash: [6,4], pointRadius: 0, tension: 0.1, fill: false }
+            ]},
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { display: false },
+                    tooltip: { callbacks: { title: it => { try { return fmtDate(new Date(it[0].raw?.x ?? it[0].parsed?.x ?? it[0].label)); } catch(e) { return ''; } } } }
+                },
+                scales: {
+                    x: { type: 'time', time: { unit: 'month', tooltipFormat: 'dd LLL yyyy', displayFormats: { day: 'dd LLL', month: 'LLL yy', year: 'yyyy' } }, ticks: { maxTicksLimit: 12, font: { size: 11 } }, grid: { color: TH.gridColor } },
+                    y: { ticks: { font: { size: 11 } }, grid: { color: TH.gridColor } }
+                }
+            }
+        });
+    }
+
+    function buildFxComparativeChart(allData) {
+        const ctx = document.getElementById('fxComparativeChart').getContext('2d');
+        const datasets = FX_CURRENCIES.map(c => {
+            const d = allData[c];
+            if (!d || d.length === 0) return null;
+            const base = d[0].rate;
+            return { label: c, data: d.map(p => ({ x: p.date, y: (p.rate / base) * 100 })), borderColor: FX_COLORS[c], borderWidth: 2, pointRadius: 0, tension: 0.1, fill: false };
+        }).filter(Boolean);
+        FX_STATE.charts.comparative = new Chart(ctx, {
+            type: 'line', data: { datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { labels: { usePointStyle: true, padding: 16, font: { size: 12 } } },
+                    annotation: { annotations: { baseline: { type: 'line', yMin: 100, yMax: 100, borderColor: TH.black20, borderDash: [4,4], borderWidth: 1, label: { content: 'Base = 100', display: true, position: 'end', backgroundColor: 'transparent', color: TH.grayDark, font: { size: 10 } } } } }
+                },
+                scales: {
+                    x: { type: 'time', time: { unit: 'month', tooltipFormat: 'dd LLL yyyy', displayFormats: { day: 'dd LLL', month: 'LLL yy', year: 'yyyy' } }, ticks: { maxTicksLimit: 12, font: { size: 11 } }, grid: { color: TH.gridColor } },
+                    y: { ticks: { font: { size: 11 }, callback: v => v.toFixed(0) }, grid: { color: TH.gridColor } }
+                }
+            }
+        });
+    }
+
+    function buildFxVolatilityChart(allData) {
+        const ctx = document.getElementById('fxVolatilityChart').getContext('2d');
+        const datasets = FX_CURRENCIES.map(c => {
+            const d = allData[c];
+            if (!d) return null;
+            const vol = calcFxVolatility(d, 30);
+            return { label: c, data: d.map((p, i) => ({ x: p.date, y: vol[i] })), borderColor: FX_COLORS[c], borderWidth: 1.5, pointRadius: 0, tension: 0.2, fill: false };
+        }).filter(Boolean);
+        FX_STATE.charts.volatility = new Chart(ctx, {
+            type: 'line', data: { datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { labels: { usePointStyle: true, padding: 12, font: { size: 11 } } } },
+                scales: {
+                    x: { type: 'time', time: { unit: 'month', tooltipFormat: 'dd LLL yyyy', displayFormats: { day: 'dd LLL', month: 'LLL yy', year: 'yyyy' } }, ticks: { maxTicksLimit: 6, font: { size: 10 } }, grid: { color: TH.gridColor } },
+                    y: { ticks: { callback: v => v.toFixed(0) + '%' }, grid: { color: TH.gridColor } }
+                }
+            }
+        });
+    }
+
+    function buildFxAnnualBarChart(allData, selectedCurrency) {
+        const ctx = document.getElementById('fxAnnualChart').getContext('2d');
+        const annRet = calcFxAnnualReturns(allData[selectedCurrency]);
+        const years = Object.keys(annRet).slice(1);
+        document.getElementById('fxAnnualChartTitle').textContent = 'Depreciação Anual — ' + selectedCurrency + ' vs Dólar';
+        FX_STATE.charts.annual = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: years, datasets: [{ data: years.map(y => annRet[y]), backgroundColor: years.map(y => annRet[y] > 0 ? TH.red : TH.green), borderRadius: 4 }] },
+            options: { responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: it => (it.parsed.y > 0 ? 'Depreciação: +' : 'Valorização: ') + it.parsed.y.toFixed(1) + '%' } } },
+                scales: { x: { grid: { display: false } }, y: { ticks: { callback: v => v.toFixed(0) + '%' }, grid: { color: TH.gridColor } } }
+            }
+        });
+    }
+
+    function buildFxDrawdownChart(labels, dd, currency) {
+        document.getElementById('fxDrawdownTitle').textContent = 'Depreciação desde a Melhor Taxa — ' + currency;
+        const ctx = document.getElementById('fxDrawdownChart').getContext('2d');
+        FX_STATE.charts.dd = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets: [{ data: dd, borderColor: TH.red, backgroundColor: TH.redBg, borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.1 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false },
+                    tooltip: { callbacks: { title: it => { try { return fmtDate(new Date(it[0].raw?.x ?? it[0].parsed?.x ?? it[0].label)); } catch(e) { return ''; } }, label: it => 'Depreciação: +' + it.parsed.y.toFixed(1) + '% da melhor taxa' } }
+                },
+                scales: {
+                    x: { type: 'time', time: { unit: 'month', tooltipFormat: 'dd LLL yyyy', displayFormats: { day: 'dd LLL', month: 'LLL yy', year: 'yyyy' } }, ticks: { maxTicksLimit: 10, font: { size: 11 } }, grid: { color: TH.gridColor } },
+                    y: { min: 0, ticks: { callback: v => '+' + v + '%' }, grid: { color: TH.gridColor } }
+                }
+            }
+        });
+    }
+
+    function buildFxAnnualTable(allData) {
+        const allYears = new Set();
+        FX_CURRENCIES.forEach(c => { if (!allData[c]) return; Object.keys(calcFxAnnualReturns(allData[c])).forEach(y => allYears.add(y)); });
+        const years = [...allYears].sort().slice(1);
+        document.getElementById('fxAnnualHeader').innerHTML = '<th>Moeda</th>' + years.map(y => '<th>' + y + '</th>').join('') + '<th>Acum.</th>';
+        const body = document.getElementById('fxAnnualBody'); body.innerHTML = '';
+        FX_CURRENCIES.forEach(c => {
+            const d = allData[c];
+            if (!d || d.length === 0) return;
+            const ret = calcFxAnnualReturns(d);
+            const total = ((d[d.length-1].rate - d[0].rate) / d[0].rate) * 100;
+            const tr = document.createElement('tr');
+            tr.innerHTML = '<td><strong style="color:' + FX_COLORS[c] + '">' + c + '</strong> <span style="color:var(--rivool-gray-dark);font-size:11px">' + FX_NAMES[c] + '</span></td>' +
+                years.map(y => {
+                    const v = ret[y];
+                    if (v === undefined || v === 0) return '<td style="color:var(--rivool-gray-dark)">--</td>';
+                    const color = v > 5 ? 'var(--accent-red)' : v < -5 ? 'var(--accent-green)' : 'var(--rivool-black-60)';
+                    const bg = v > 10 ? 'rgba(255,59,92,0.08)' : v < -10 ? 'rgba(0,196,140,0.08)' : 'transparent';
+                    return '<td style="color:' + color + ';background:' + bg + ';font-weight:600">' + (v > 0 ? '+' : '') + v.toFixed(1) + '%</td>';
+                }).join('') +
+                '<td style="font-weight:700;color:' + (total > 0 ? 'var(--accent-red)' : 'var(--accent-green)') + '">' + (total > 0 ? '+' : '') + total.toFixed(1) + '%</td>';
+            body.appendChild(tr);
+        });
+    }
+
+    function buildFxSummary(allData, selectedCurrency, data) {
+        const name = FX_NAMES[selectedCurrency];
+        const current = data[data.length - 1].rate, first = data[0].rate;
+        const totalChg = ((current - first) / first) * 100;
+        let worstC = '', worstChg = -Infinity, bestC = '', bestChg = Infinity;
+        FX_CURRENCIES.forEach(c => {
+            const d = allData[c];
+            if (!d || d.length < 2) return;
+            const chg = ((d[d.length-1].rate - d[0].rate) / d[0].rate) * 100;
+            if (chg > worstChg) { worstChg = chg; worstC = c; }
+            if (chg < bestChg) { bestChg = chg; bestC = c; }
+        });
+        document.getElementById('fxSummary').innerHTML =
+            '<strong>Resumo Cambial:</strong> No período analisado, o ' + name + ' (' + selectedCurrency + ') ' +
+            (totalChg > 0 ? '<strong style="color:var(--accent-red)">depreciou ' + totalChg.toFixed(1) + '%</strong>' : '<strong style="color:var(--accent-green)">valorizou ' + Math.abs(totalChg).toFixed(1) + '%</strong>') +
+            ' frente ao dólar (de ' + first.toFixed(4) + ' para ' + current.toFixed(4) + '). ' +
+            'Entre as moedas emergentes analisadas, a <strong>pior performance</strong> foi da ' +
+            FX_NAMES[worstC] + ' (' + worstC + ') com ' + (worstChg > 0 ? '+' : '') + worstChg.toFixed(1) + '% de depreciação, ' +
+            'e a <strong>melhor performance</strong> foi da ' + FX_NAMES[bestC] + ' (' + bestC + ') com ' + (bestChg > 0 ? '+' : '') + bestChg.toFixed(1) + '%. ' +
+            '<br><em>Dados fornecidos pelo Banco Central Europeu (ECB) via Frankfurter API. Taxas de referência diárias.</em>';
+    }
+
+    // FX Event Handlers
+    document.getElementById('fxSelector').addEventListener('click', e => {
+        if (e.target.classList.contains('control-btn')) {
+            document.querySelectorAll('#fxSelector .control-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            FX_STATE.currency = e.target.dataset.fx;
+            if (FX_STATE.data) buildFxCharts(FX_STATE.data, FX_STATE.currency);
+        }
+    });
+
+    document.getElementById('fxPeriodSelector').addEventListener('click', e => {
+        if (e.target.classList.contains('control-btn')) {
+            document.querySelectorAll('#fxPeriodSelector .control-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            FX_STATE.period = parseInt(e.target.dataset.fxp);
+            loadForexData();
+        }
+    });
+
+    async function loadForexData() {
+        if (isFxLoading) return;
+        isFxLoading = true;
+        const fxOverlay = document.getElementById('fxLoadingOverlay');
+        const fxContent = document.getElementById('fxKpiSection');
+        fxOverlay.style.display = 'flex';
+        fxContent.style.display = 'none';
+        document.getElementById('fxSummary').innerHTML = '';
+        try {
+            FX_STATE.data = await fetchForexData(FX_STATE.period);
+            buildFxCharts(FX_STATE.data, FX_STATE.currency);
+            fxOverlay.style.display = 'none';
+            fxContent.style.display = '';
+        } catch(err) {
+            console.error('Forex error:', err);
+            fxOverlay.style.display = 'none';
+            fxContent.style.display = '';
+            document.getElementById('fxSummary').innerHTML = '<strong style="color:var(--accent-red)">Erro ao carregar dados cambiais:</strong> ' + err.message + '<br><small>Verifique sua conexão e recarregue a página.</small>';
+        } finally {
+            isFxLoading = false;
+        }
+    }
+
+    // Load both crypto and forex data
+    loadData();
+    loadForexData();
+    </script>
+</body>
+</html>
